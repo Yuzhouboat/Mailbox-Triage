@@ -22,9 +22,14 @@ python3 -m pip install --user exchangelib tzlocal
 
 ## Inputs
 
-Expect some combination of:
+**Default when the user gives no scope: all unread emails from the last 24 hours.**
+Run the triage helper with `--days 1 --unread-only`. ("Today" here means a rolling
+24-hour lookback, since the helper's `--days` is a rolling window, not a calendar day.)
 
-- a time window such as today, this week, or unread only
+Override the default when the user asks for a different scope:
+
+- a wider time window (e.g. this week → `--days 7`)
+- read mail included (drop `--unread-only`)
 - custom grouping or escalation rules from the user
 - mailbox credentials stored in a local config file
 
@@ -47,7 +52,7 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
 
 1. Load the mailbox config.
 2. Run [scripts/triage_exchange_mailbox.py](scripts/triage_exchange_mailbox.py) to connect through Exchange Web Services.
-3. Query Inbox for only the messages needed for the requested window.
+3. Query Inbox for only the messages needed for the requested window. With no scope from the user, default to `--days 1 --unread-only` (all unread from the last 24 hours).
 4. If a message body indicates the real error details are in an attachment, rerun the helper with attachment download enabled or inspect the downloaded attachment path from the helper output before final classification.
 5. Classify each message into one primary group using `~/mailbox-triage/triage-rules.md`.
 6. Assign one priority:
@@ -72,7 +77,8 @@ Use the bundled helper as the canonical mailbox access path:
 Run helper commands from this `mailbox-triage` skill directory.
 
 ```bash
-python3 scripts/triage_exchange_mailbox.py --days 7
+# Default scope: all unread from the last 24 hours.
+python3 scripts/triage_exchange_mailbox.py --days 1 --unread-only
 ```
 
 Useful flags:

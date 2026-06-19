@@ -4,12 +4,19 @@ server = "east.exch081.serverdata.net"
 username = "mailbox@example.com"
 password = "replace-me"
 
-# Optional. Defaults to `username` when omitted.
+# Optional. The address of the mailbox you want to open (the inbox to triage).
+# Defaults to `username` when omitted.
+#   - Triaging YOUR OWN mailbox: remove this line (or leave it equal to `username`).
+#   - Triaging a SHARED/DELEGATED mailbox: set this to the shared mailbox address,
+#     while `username`/`password` above stay as YOUR login credentials.
 primary_smtp_address = "mailbox@example.com"
 
-# Optional. Defaults shown below.
+# Optional. Whether to auto-detect Exchange server settings from the email address.
+# Defaults to false.
+#   - Keep false when `server` above is set to a known host (recommended, faster).
+#   - Set true only if you do NOT know the server and want exchangelib to discover it
+#     (slower, and may fail behind locked-down corporate DNS).
 autodiscover = false
-access_type = "DELEGATE"
 
 # Optional. Used by scripts/move_triaged_messages.py.
 # Values can be unique folder names or slash-delimited paths.
