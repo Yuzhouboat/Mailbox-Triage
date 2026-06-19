@@ -24,18 +24,13 @@ Optional:
 
 - `primary_smtp_address`
 - `autodiscover`
-- `access_type`
-- `[priority_folders].P1`
-- `[priority_folders].P2`
-- `[priority_folders].P3`
-- `[priority_folders].P4`
+- `[group_folders]` (one entry per group whose folder name differs from the group name)
 
 Defaults:
 
 - `primary_smtp_address`: `username`
 - `autodiscover`: `false`
-- `access_type`: `DELEGATE`
-- priority folders: `P1 - Urgent`, `P2 - Actionable`, `P3 - Monitor`, `P4 - Low Signal`
+- group folders: each group is filed into a folder with the same name as the group, unless overridden in `[group_folders]`
 
 ## Connection Pattern
 
@@ -63,7 +58,7 @@ If folder access succeeds but message or attachment retrieval fails:
 
 - report whether the blocker is query shape, missing item data, or attachment extraction failure
 
-If priority-folder moves fail:
+If group-folder moves fail:
 
 - report whether the blocker is a missing folder, ambiguous folder name, missing message ID, or Exchange move failure
 - do not create folders or retry with a guessed folder path

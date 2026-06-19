@@ -116,10 +116,6 @@ def build_account(config: Dict[str, Any]) -> Any:
     server = config["server"]
     primary_smtp_address = config.get("primary_smtp_address", username)
     autodiscover = bool(config.get("autodiscover", False))
-    access_type = str(config.get("access_type", "DELEGATE")).upper()
-    if access_type != "DELEGATE":
-        raise ValueError(f"Unsupported access_type {access_type!r}. Only DELEGATE is currently supported.")
-
     credentials = Credentials(username, password)
     exchange_config = Configuration(server=server, credentials=credentials)
     return Account(

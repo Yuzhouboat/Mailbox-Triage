@@ -19,9 +19,12 @@ primary_smtp_address = "mailbox@example.com"
 autodiscover = false
 
 # Optional. Used by scripts/move_triaged_messages.py.
-# Values can be unique folder names or slash-delimited paths.
-[priority_folders]
-P1 = "P1 - Urgent"
-P2 = "P2 - Actionable"
-P3 = "P3 - Monitor"
-P4 = "P4 - Low Signal"
+# By default each group is filed into an Exchange folder with the SAME NAME as the
+# group (e.g. group "Distribution alerts" -> folder "Distribution alerts").
+# Only add entries here to OVERRIDE that for groups whose folder is named
+# differently, or to disambiguate with a slash-delimited path.
+# Keys are group names from triage-rules.md; values are folder names or paths.
+# Folders must already exist; the script never creates them.
+[group_folders]
+# "Distribution alerts" = "Inbox/Triage/Distribution alerts"
+# "Uncategorized" = "Inbox/Triage/Uncategorized"

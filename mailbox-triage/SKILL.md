@@ -1,11 +1,11 @@
 ---
 name: mailbox-triage
-description: Triage a production mailbox or inbox using Exchange Web Services and custom business-group rules. Use for requests to review recent email, summarize unread mail by topic, classify mailbox messages into the defined heading groups, inspect attachments when they contain the real error details, produce actionable catch-up summaries with durable message identifiers, or file classified mailbox messages into P1-P4 priority folders after preview.
+description: Triage a production mailbox or inbox using Exchange Web Services and custom business-group rules. Use for requests to review recent email, summarize unread mail by topic, classify mailbox messages into the defined heading groups (or an Uncategorized fallback), inspect attachments when they contain the real error details, produce grouped catch-up summaries with durable message identifiers, or automatically file unflagged messages into per-group folders after triage.
 ---
 
 # Mailbox Triage
 
-Use this skill when the user wants email triage, prioritization, grouped summaries, catch-up reporting, or filing classified messages into priority folders from a shared mailbox.
+Use this skill when the user wants email triage, grouped summaries, catch-up reporting, or filing classified messages into per-group folders from a shared mailbox.
 
 ## Setup
 
@@ -54,22 +54,20 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
 2. Run [scripts/triage_exchange_mailbox.py](scripts/triage_exchange_mailbox.py) to connect through Exchange Web Services.
 3. Query Inbox for only the messages needed for the requested window. With no scope from the user, default to `--days 1 --unread-only` (all unread from the last 24 hours).
 4. If a message body indicates the real error details are in an attachment, rerun the helper with attachment download enabled or inspect the downloaded attachment path from the helper output before final classification.
-5. Classify each message into one primary group using `~/mailbox-triage/triage-rules.md`.
-6. Assign one priority:
-   - `P1`: urgent, revenue-risk, legal-risk, or externally time-sensitive
-   - `P2`: actionable and important, but not immediately urgent
-   - `P3`: informational confirmation or monitoring signal
-   - `P4`: low-value noise, newsletter, or safe-to-ignore automation
-7. Mark action status:
-   - `Actionable`
-   - `Needs confirmation`
-   - `Informational`
-   - `Ignore`
-8. Group related messages when repetition is high, especially retailer failure reports and routine summaries.
-9. Extract concrete follow-up data such as ISBNs, filenames, deadlines, vendors, affected accounts, and named stakeholders.
-10. If the user asks to move or file triaged messages, create a P1-P4 assignment JSON for messages from the current triage payload.
-11. Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) in preview mode and show the exact message-to-folder plan.
-12. Execute mailbox moves only after explicit user confirmation in the current thread.
+5. Classify each message into exactly one group:
+  - Use the group headings defined in `~/mailbox-triage/triage-rules.md`.
+  - If a message fits no defined group, assign it to the default group `Uncategorized`.
+  - Every message ends up in exactly one group — a defined group or `Uncategorized`.
+6. Within each group, consolidate and summarize:
+  - Cluster messages that share the same root cause, sender pattern, or topic thread into a single grouped item. Show a count when collapsing repeated alerts (e.g. "3 suppression notices from Bookwire").
+  - For each item (single message or cluster), write a one-to-two sentence plain-English summary of what it is about and what — if anything — it requires.
+  - Flag any item that needs a follow-up action with `[Follow-up needed]`.
+  - Flag any item that is high-priority or time-sensitive with `[Priority]`.
+  - An item may carry both flags. Apply `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder), not just urgency words.
+7. After presenting the summary, automatically file messages into their group folders:
+  - Build the group-assignment JSON including only messages that were NOT flagged as `[Priority]` or `[Follow-up needed]` during step 6. Flagged messages must be omitted from the JSON entirely — they stay in the Inbox untouched.
+  - Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) with `--execute` directly (no preview step, no user confirmation required).
+  - Report how many messages were moved and how many were left in the Inbox due to flags.
 
 ## Helper Usage
 
@@ -96,24 +94,26 @@ Use the move helper only after messages have been classified:
 ```bash
 python3 scripts/move_triaged_messages.py \
   --messages-json /tmp/triage.json \
-  --assignments-json /tmp/priority-assignments.json
+  --assignments-json /tmp/group-assignments.json
 ```
 
-The assignment file must contain durable message refs from the current triage payload and one priority per message:
+The assignment file must contain durable message refs from the current triage payload and one group per message:
 
 ```json
 {
   "assignments": [
     {
       "message_ref": "<ews-item-id-or-message-id>",
-      "priority": "P1",
+      "group": "Distribution alerts",
       "reason": "Suppression notice with retail availability impact"
     }
   ]
 }
 ```
 
-The move helper defaults to preview mode. Add `--execute` only after explicit user confirmation. Add `--read-only` when the user only wants messages whose triage payload says `is_read` is true.
+Each message is filed into an Exchange folder named after its group. By default the folder name equals the group name; override per group via the `[group_folders]` section of the config. Folders must already exist — the helper never creates them and reports missing or ambiguous folders instead of guessing.
+
+Always pass `--execute` when running the move helper during triage — unflagged messages are moved automatically without a preview step. Add `--read-only` when the user only wants messages whose triage payload says `is_read` is true.
 
 ## Attachment Handling
 
@@ -126,37 +126,33 @@ Use this when the message body says the real error details are attached.
 
 ## Output Format
 
-Default to a concise triage report with these sections:
+Default to a concise triage report organized by group. Use one section per group,
+titled with the exact group heading from `~/mailbox-triage/triage-rules.md`, plus an
+`Uncategorized` section for messages that fit no defined group. Omit empty groups.
 
-- `Urgent`
-- `Actionable`
-- `Confirmation / Monitor`
-- `Ignore / Low Signal`
+For each reported item (single message or consolidated cluster), include:
 
-For each reported item, include:
-
-- sender
-- subject
+- `[Priority]` and/or `[Follow-up needed]` flags when applicable, on the same line as the subject
+- sender (or sender pattern for clusters)
+- subject (or shared topic for clusters), with a count when multiple messages are collapsed
 - received timestamp when helpful
-- `Open email` link when a stable per-message mailbox URL is available
-- otherwise durable identifiers such as EWS item id or message id
-- reason it was classified that way
-- next action if one is obvious
+- durable identifiers such as EWS item id or message id
+- one-to-two sentence plain-English summary of what the message is about
+- concrete follow-up action if one is required (omit this line when no action is needed)
 
-If the user asks for a catch-up summary or grouped summary, organize messages under the exact group headings defined in `~/mailbox-triage/triage-rules.md`. Omit empty groups.
+Order `Uncategorized` last so unmatched messages are easy to scan and reclassify.
 
 ## Behavioral Rules
 
-- Prefer concrete business impact over superficial urgency words.
+- Classify each message into exactly one group; use `Uncategorized` only when it fits no defined group.
 - Use the document-defined group headings as the canonical grouping taxonomy.
-- Collapse repeated automated alerts into one grouped item when the same failure pattern repeats.
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
 - Use the Exchange helper instead of browser or OWA workflows for reading messages and attachments.
-- Use the move helper instead of ad hoc shell snippets when filing classified messages into P1-P4 folders.
-- Never move messages without first previewing the exact selected messages and destination folders.
+- Use the move helper instead of ad hoc shell snippets when filing classified messages into group folders.
+- Automatically move unflagged messages after presenting the triage summary — no preview or confirmation step needed.
+- Never move messages that carry a `[Priority]` or `[Follow-up needed]` flag; leave them in the Inbox.
 - Only move messages already present in the current triage result set.
-- When a stable per-message mailbox URL is available, include it as an `Open email` link.
-- Do not emit temporary or tokenized mailbox links that are likely to expire immediately.
-- If no stable direct link is available, fall back to sender, subject, received time, and durable message identifiers.
+- Always identify messages using durable identifiers (EWS item id, message id, sender, subject, received time). Never include mailbox URLs or links in the output.
 - Treat out-of-office replies as low signal unless they block an active escalation path.
 - If the visible message body only shows an out-of-office response on top of a likely important thread, say that explicitly.
+

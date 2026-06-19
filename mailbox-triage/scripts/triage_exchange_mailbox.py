@@ -26,6 +26,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--download-attachments", action="store_true", help="Download file attachments to disk")
     parser.add_argument("--attachment-dir", help="Directory for downloaded attachments")
     return parser.parse_args()
+
+
 def normalize_text(text: Optional[Any]) -> str:
     if text is None:
         return ""

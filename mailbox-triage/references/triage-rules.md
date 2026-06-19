@@ -2,145 +2,53 @@
 
 Use these defaults unless the user overrides them in the thread.
 
-## Priority Categories
-
-### P1
-
-Use `P1` for:
-
-- high-priority Ignition publisher care requests
-- leadership or key stakeholder requests with business impact
-- infringement complaints against ORIM
-- suppression notices
-- named deadlines
-- vendor-of-record transfer confirmations
-- urgent distribution failures or metadata errors that block retail availability
-- emails from accounts the user explicitly says to watch
-
-### P2
-
-Use `P2` for:
-
-- vendor, billing, conversion partner, or finance-related requests
-- preorder notices from Amazon or Google
-- asset correction and content review notices
-- audit reports from retailer or library accounts
-- tech or data-team reports that imply follow-up work
-- active project emails tied to specific topics the user cares about
-
-### P3
-
-Use `P3` for:
-
-- confirmations of withdrawal from sale
-- routine distribution confirmations
-- grouped monitoring reports worth awareness but not immediate action
-
-### P4
-
-Use `P4` for:
-
-- newsletters
-- promotional messages
-- routine quarantine summaries unless the user says otherwise
-- out-of-office replies
-- verification emails not connected to active work
+Classify each message into exactly one group. Use the headings below. If a message
+fits none of them, assign it to the `Uncategorized` group (defined at the end).
 
 ## Group Mapping
 
-Use these exact headings as the default grouping taxonomy for catch-up summaries and grouped email reports.
+Use these exact headings as the grouping taxonomy for catch-up summaries and grouped email reports.
 
-### Requests from high-priority, high-touch Ignition publisher clients
+### P1 - Urgent
 
-- Ignition Publisher Care
-- revenue-impacting client concerns
-- business development requests
-- high-touch publisher requests the user wants watched closely
+- named deadlines requiring same-day or next-day response
+- requests with clear and immediate business impact
+- issues that will escalate or cause damage if not handled quickly
+- complaints or notices that require fast action to prevent further consequences
+- messages from accounts or people the user has flagged as high-priority
 
-### Requests from ORIM stakeholders
+### P2 - Actionable
 
-- publishing catalog
-- author or agent care
-- finance
-- revenue impact
-- marketing
-- leadership or internal stakeholder requests
+- active project emails tied to topics the user is tracking
+- requests that need a response but are not immediately urgent
+- notices that require follow-up work or a decision
+- reports or updates that imply a next step from the user
 
-### Requests from Vendors
+### P3 - Monitor
 
-- conversion partners
-- new vendors under consideration
-- billing contacts
-- vendor finance, cost, or revenue items
+- status updates and confirmations worth awareness but no action needed now
+- routine reports that show everything is working normally
+- informational notices that may become relevant later
 
-### Urgent Messages
+### P4 - Low Signal
 
-- suppression notices
-- named deadlines
-- messages from watched accounts or specified users
-- retailer account manager follow-ups
-- externally or internally urgent requests that need fast response
+- newsletters and promotional emails
+- out-of-office replies not connected to an active thread
+- automated digests or reports that show no anomalies
+- verification or notification emails not tied to active work
 
-### Active project flags
+### Uncategorized
 
-- emails tied to specific high-priority projects
-- messages matching user-specified topics to watch
-
-### Distribution alerts
-
-- asset correction or confirmation
-- missing asset notification
-- distribution failures
-- metadata errors
-- retailers and vendors such as Bookwire, Scribd, OverDrive, Kobo, Google, Firebrand, Amazon, RedShelf, Storytel
-
-### Pre-order Notification
-
-- preorder notices from Amazon or Google
-
-### Notice of assets needing correction
-
-- Google notices
-- Amazon Content Review
-- OverDrive, Kobo, RedShelf, Storytel, and similar asset correction notices
-
-### Notice of Infringement Complaints against ORM
-
-- infringement or rights complaints against ORIM/ORM
-- complaints that can lead to suppression if not handled quickly
-
-### Vendor of Record Transfer confirmation
-
-- vendor-of-record transfer confirmations
-- Amazon, B&N, Google, and similar retailer/account ownership transfer notices
-
-### Confirmation of Withdrawal from Sale from Ebook Accounts
-
-- withdrawal confirmations from ebook accounts such as DeMarque, RedShelf, EBSCO, Storytel
-- important confirmation items that are usually not actionable
-
-### Data team reports
-
-- infringing edition report
-- series linking report
-
-### Tech Team Reports
-
-- missing cover report
-- tech-team reporting with catalog, marketing, or revenue impact
-
-### Audit Reports from Ebook Accounts
-
-- audit reports from Hoopla, Freading, or similar accounts
+- the default fallback group for any message that does not clearly fit a group above
+- use this instead of forcing a message into a poorly matching group
 
 ## Output Preferences
 
-- Surface `why it matters`, not just the category label.
 - Use the exact group headings above when the user asks for grouped summaries.
-- Include an `Open email` link when a stable per-message mailbox URL is available.
-- Never include mailbox links that are obviously session-bound, tokenized, or likely to expire immediately.
-- If no stable direct URL is available, provide sender, subject, and timestamp so the message can be found quickly in the mailbox.
-- Group repetitive vendor failures into one bullet with a count and the shared failure pattern.
+- List the `Uncategorized` group last so unmatched messages are easy to scan and reclassify.
+- Within each group, consolidate messages that share the same root cause, sender pattern, or topic into one item with a count.
+- Write a one-to-two sentence plain-English summary for each item.
+- Mark items that need a follow-up action with `[Follow-up needed]`.
+- Mark items that are high-priority or time-sensitive with `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder requests) — not just urgency words.
+- Identify messages using sender, subject, timestamp, and durable identifiers (EWS item id or message id). Never include mailbox URLs or links in the output.
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
-- Group repeated vendor alerts by attachment-derived root cause when possible, not just by shared subject line.
-- Pull out concrete entities: ISBNs, filenames, retailer names, deadlines, stakeholder names.

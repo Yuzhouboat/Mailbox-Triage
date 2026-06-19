@@ -14,25 +14,16 @@ from mailbox_common import (
 )
 
 
-PRIORITIES = ("P1", "P2", "P3", "P4")
-DEFAULT_PRIORITY_FOLDERS = {
-    "P1": "P1 - Urgent",
-    "P2": "P2 - Actionable",
-    "P3": "P3 - Monitor",
-    "P4": "P4 - Low Signal",
-}
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Preview or execute moving triaged Exchange messages into priority folders."
+        description="Preview or execute moving triaged Exchange messages into group folders."
     )
     parser.add_argument("--config", help="Path to mailbox config TOML file")
     parser.add_argument("--messages-json", required=True, help="JSON payload from triage_exchange_mailbox.py")
     parser.add_argument(
         "--assignments-json",
         required=True,
-        help="JSON file with message refs and P1-P4 priorities.",
+        help="JSON file with message refs and group names.",
     )
     parser.add_argument("--execute", action="store_true", help="Move messages instead of only previewing the plan")
     parser.add_argument(
@@ -40,10 +31,6 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Only move messages whose triage payload says is_read is true.",
     )
-    parser.add_argument("--folder-p1", help="Destination folder path or unique name for P1 messages")
-    parser.add_argument("--folder-p2", help="Destination folder path or unique name for P2 messages")
-    parser.add_argument("--folder-p3", help="Destination folder path or unique name for P3 messages")
-    parser.add_argument("--folder-p4", help="Destination folder path or unique name for P4 messages")
     return parser.parse_args()
 
 
@@ -61,11 +48,11 @@ def require_messages(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     return messages
 
 
-def normalize_priority(value: Any) -> str:
-    priority = str(value or "").strip().upper()
-    if priority not in PRIORITIES:
-        raise ValueError(f"Unsupported priority {value!r}. Expected one of {', '.join(PRIORITIES)}.")
-    return priority
+def normalize_group(value: Any) -> str:
+    group = str(value or "").strip()
+    if not group:
+        raise ValueError("Assignment is missing a group name.")
+    return group
 
 
 def first_present(mapping: Dict[str, Any], keys: Sequence[str]) -> Optional[Any]:
@@ -124,13 +111,13 @@ def load_assignments(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     for idx, raw in enumerate(raw_assignments, start=1):
         if not isinstance(raw, dict):
             raise ValueError(f"Assignment {idx} must be an object.")
-        priority = normalize_priority(first_present(raw, ("priority", "urgency", "group")))
+        group = normalize_group(first_present(raw, ("group", "category")))
         refs = assignment_refs(raw)
         if not refs:
             raise ValueError(f"Assignment {idx} is missing message_ref, ews_item_id, or message_id.")
         assignments.append(
             {
-                "priority": priority,
+                "group": group,
                 "refs": refs,
                 "reason": raw.get("reason"),
             }
@@ -172,21 +159,15 @@ def resolve_assignment_message(
     return next(iter(unique.values())), None
 
 
-def folder_map_from_config(config: Dict[str, Any], args: argparse.Namespace) -> Dict[str, str]:
-    configured = config_section(config, "priority_folders")
-    folder_map = {
-        priority: str(configured.get(priority) or DEFAULT_PRIORITY_FOLDERS[priority])
-        for priority in PRIORITIES
-    }
-    overrides = {
-        "P1": args.folder_p1,
-        "P2": args.folder_p2,
-        "P3": args.folder_p3,
-        "P4": args.folder_p4,
-    }
-    for priority, override in overrides.items():
-        if override:
-            folder_map[priority] = override
+def folder_map_from_config(config: Dict[str, Any], groups: Iterable[str]) -> Dict[str, str]:
+    # The destination folder for a group defaults to the group name itself.
+    # A [group_folders] section overrides that mapping when a folder is named
+    # differently from the group (or needs a slash-delimited path to disambiguate).
+    configured = config_section(config, "group_folders")
+    folder_map: Dict[str, str] = {}
+    for group in groups:
+        override = configured.get(group)
+        folder_map[group] = str(override) if override else group
     return folder_map
 
 
@@ -241,12 +222,12 @@ def build_move_plan(
     planned_item_ids = set()
 
     for assignment in assignments:
-        priority = assignment["priority"]
+        group = assignment["group"]
         message, error = resolve_assignment_message(assignment, message_index)
         if error:
             skipped.append(
                 {
-                    "priority": priority,
+                    "group": group,
                     "refs": assignment["refs"],
                     "status": error,
                     "reason": assignment.get("reason"),
@@ -259,7 +240,7 @@ def build_move_plan(
         if not item_id:
             skipped.append(
                 {
-                    "priority": priority,
+                    "group": group,
                     "message": message_summary(message),
                     "status": "missing_ews_item_id",
                     "reason": assignment.get("reason"),
@@ -270,7 +251,7 @@ def build_move_plan(
         if item_id in planned_item_ids:
             skipped.append(
                 {
-                    "priority": priority,
+                    "group": group,
                     "message": message_summary(message),
                     "status": "duplicate_assignment",
                     "reason": assignment.get("reason"),
@@ -281,7 +262,7 @@ def build_move_plan(
         if read_only and message.get("is_read") is not True:
             skipped.append(
                 {
-                    "priority": priority,
+                    "group": group,
                     "message": message_summary(message),
                     "status": "not_read",
                     "reason": assignment.get("reason"),
@@ -292,8 +273,8 @@ def build_move_plan(
         planned_item_ids.add(item_id)
         moves.append(
             {
-                "priority": priority,
-                "destination_folder": folder_map[priority],
+                "group": group,
+                "destination_folder": folder_map[group],
                 "message": message_summary(message),
                 "ews_item_id": item_id,
                 "changekey": identifiers.get("changekey") if isinstance(identifiers, dict) else None,
@@ -308,15 +289,15 @@ def build_move_plan(
 def execute_moves(config: Dict[str, Any], moves: List[Dict[str, Any]], folder_map: Dict[str, str]) -> List[Dict[str, Any]]:
     account = build_account(config)
     folder_cache = {
-        priority: resolve_folder(account, destination)
-        for priority, destination in folder_map.items()
+        group: resolve_folder(account, destination)
+        for group, destination in folder_map.items()
     }
     results = []
     for move in moves:
         result = dict(move)
         try:
             message = account.inbox.get(id=move["ews_item_id"])
-            message.move(to_folder=folder_cache[move["priority"]])
+            message.move(to_folder=folder_cache[move["group"]])
             result["status"] = "moved"
         except Exception as exc:
             result["status"] = "failed"
@@ -336,7 +317,8 @@ def main() -> int:
     assignments_payload = load_json(Path(args.assignments_json))
     messages = require_messages(messages_payload)
     assignments = load_assignments(assignments_payload)
-    folder_map = folder_map_from_config(config, args)
+    groups = list(dict.fromkeys(assignment["group"] for assignment in assignments))
+    folder_map = folder_map_from_config(config, groups)
 
     moves, skipped = build_move_plan(messages, assignments, folder_map, args.read_only)
     result = execute_moves(config, moves, folder_map) if args.execute else None
