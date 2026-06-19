@@ -1,0 +1,20 @@
+# Copy this file to `~/mailbox-triage/mailbox-triage-config.toml`.
+
+server = "east.exch081.serverdata.net"
+username = "mailbox@example.com"
+password = "replace-me"
+
+# Optional. Defaults to `username` when omitted.
+primary_smtp_address = "mailbox@example.com"
+
+# Optional. Defaults shown below.
+autodiscover = false
+access_type = "DELEGATE"
+
+# Optional. Used by scripts/move_triaged_messages.py.
+# Values can be unique folder names or slash-delimited paths.
+[priority_folders]
+P1 = "P1 - Urgent"
+P2 = "P2 - Actionable"
+P3 = "P3 - Monitor"
+P4 = "P4 - Low Signal"

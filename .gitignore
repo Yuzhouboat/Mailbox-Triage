@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+
+# Python virtual environment
+.venv/
+venv/
+
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Local config with secrets (keep the .example template tracked)
+mailbox-triage/config/mailbox-config.toml
+mailbox-config.toml
+
+# Editor / OS noise
+*.swp
+.idea/
+.vscode/
+
+# Claude Code local (personal) settings — keep shared settings.json tracked
+.claude/settings.local.json
