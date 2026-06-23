@@ -115,6 +115,27 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
 
    Report how many messages were filed.
 
+8. After filing, send the triage summary report as a self-addressed email so the user has a persistent record of each triage session:
+
+   **[Exchange]** Run [scripts/send_triage_report.py](scripts/send_triage_report.py), passing the report text via stdin:
+
+   ```bash
+   python3 scripts/send_triage_report.py \
+     --subject "Triage Report: <mailbox> — <YYYY-MM-DD>" \
+     <<'EOF'
+   <full triage report text>
+   EOF
+   ```
+
+   The script sends a self-addressed email to the `primary_smtp_address` (or `username`) in the config.
+
+   **[Gmail]** Call the create-draft tool addressed to the Gmail account's own address (`primary_smtp_address` from config, e.g. `yuzhouboat@gmail.com`):
+   - `subject`: `"Triage Report: Gmail — <YYYY-MM-DD>"`
+   - `body`: the full triage report text
+   - `to`: the account's own address
+
+   The draft is saved in Drafts; the user can review or delete it there.
+
 ## Helper Usage (Exchange)
 
 Use the bundled helper as the canonical Exchange mailbox access path.
@@ -218,6 +239,7 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
 - Automatically file ALL messages after presenting the triage summary — no preview or confirmation step needed. Flags (`[Priority]`, `[Follow-up needed]`) do not block filing.
 - Only file messages already present in the current triage result set.
+- After filing, always send the triage report to the mailbox owner as a self-addressed email (Exchange) or draft (Gmail) — no user confirmation needed.
 - Treat out-of-office replies as low signal unless they block an active escalation path.
 - If the visible message body only shows an out-of-office response on top of a likely important thread, say that explicitly.
 
