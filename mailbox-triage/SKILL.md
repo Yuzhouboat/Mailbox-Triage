@@ -115,7 +115,7 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
 
    Report how many messages were filed.
 
-8. After filing, send the triage summary report as a self-addressed email so the user has a persistent record of each triage session:
+8. After filing, save the triage summary report directly into a dedicated folder/label so the user has a persistent record of each triage session. No email is sent; the report is written straight into the mailbox.
 
    **[Exchange]** Run [scripts/send_triage_report.py](scripts/send_triage_report.py), passing the report text via stdin:
 
@@ -127,14 +127,14 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
    EOF
    ```
 
-   The script sends a self-addressed email to the `primary_smtp_address` (or `username`) in the config.
+   The script saves the message directly into the `"Triage Reports"` folder (sibling of Inbox), creating that folder if it does not yet exist. Nothing is sent or copied to Sent Items.
 
-   **[Gmail]** Call the create-draft tool addressed to the Gmail account's own address (`primary_smtp_address` from config, e.g. `yuzhouboat@gmail.com`):
+   **[Gmail]** Call the create-label tool to ensure a `"Triage Reports"` label exists, then call the create-draft tool with:
    - `subject`: `"Triage Report: Gmail — <YYYY-MM-DD>"`
    - `body`: the full triage report text
-   - `to`: the account's own address
+   - `to`: the account's own address (e.g. `yuzhouboat@gmail.com`)
 
-   The draft is saved in Drafts; the user can review or delete it there.
+   Immediately after creating the draft, apply the `"Triage Reports"` label to it and remove the `DRAFT` system label so it sits in the label rather than cluttering the Drafts folder.
 
 ## Helper Usage (Exchange)
 
@@ -239,7 +239,7 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
 - Automatically file ALL messages after presenting the triage summary — no preview or confirmation step needed. Flags (`[Priority]`, `[Follow-up needed]`) do not block filing.
 - Only file messages already present in the current triage result set.
-- After filing, always send the triage report to the mailbox owner as a self-addressed email (Exchange) or draft (Gmail) — no user confirmation needed.
+- After filing, always save the triage report into the "Triage Reports" folder (Exchange) or label (Gmail) — no send, no user confirmation needed.
 - Treat out-of-office replies as low signal unless they block an active escalation path.
 - If the visible message body only shows an out-of-office response on top of a likely important thread, say that explicitly.
 
