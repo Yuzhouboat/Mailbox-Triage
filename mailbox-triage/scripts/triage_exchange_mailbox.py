@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL")
 from exchangelib import EWSDateTime, UTC
 from exchangelib.attachments import FileAttachment, ItemAttachment
 
-from mailbox_common import build_account, read_simple_toml, require_fields, resolve_config_path
+from mailbox_common import build_account, config_section, read_simple_toml, require_fields, resolve_config_path
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,7 +147,8 @@ def normalize_message(message: Any, config: Dict[str, Any], attachment_root: Opt
 def main() -> int:
     args = parse_args()
     config_path = resolve_config_path(args.config)
-    config = read_simple_toml(config_path)
+    raw_config = read_simple_toml(config_path)
+    config = config_section(raw_config, "exchange") or raw_config
     require_fields(config, ["server", "username", "password"])
 
     account = build_account(config)

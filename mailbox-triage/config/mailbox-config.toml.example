@@ -1,5 +1,12 @@
 # Copy this file to `~/mailbox-triage/mailbox-triage-config.toml`.
 
+# Optional. Which mailbox backend(s) are configured.
+# If only one section is present below, that backend is used automatically.
+# If both [exchange] and [gmail] sections are present, the skill will ask the user
+# which mailbox to triage at the start of each session.
+# You can also override at runtime by saying "triage my Gmail" or "triage Exchange".
+
+[exchange]
 server = "east.exch081.serverdata.net"
 username = "mailbox@example.com"
 password = "replace-me"
@@ -18,13 +25,18 @@ primary_smtp_address = "mailbox@example.com"
 #     (slower, and may fail behind locked-down corporate DNS).
 autodiscover = false
 
-# Optional. Used by scripts/move_triaged_messages.py.
-# By default each group is filed into an Exchange folder with the SAME NAME as the
-# group (e.g. group "Distribution alerts" -> folder "Distribution alerts").
-# Only add entries here to OVERRIDE that for groups whose folder is named
-# differently, or to disambiguate with a slash-delimited path.
-# Keys are group names from triage-rules.md; values are folder names or paths.
-# Folders must already exist; the script never creates them.
+[gmail]
+# No password needed — authentication is OAuth via the Gmail MCP tool.
+# See references/gmail-authentication.md for the auth flow.
+primary_smtp_address = "you@gmail.com"   # optional, informational only
+
+# Optional. Used when filing classified messages into folders (Exchange) or labels (Gmail).
+# By default each group is filed using the group name as-is.
+# Add entries here to override the folder/label name for specific groups,
+# or to use a slash-delimited path (Exchange subfolder / Gmail nested label).
+# Keys are group names from triage-rules.md; values are folder or label names/paths.
+# Exchange: folders must already exist; the script never creates them.
+# Gmail: missing labels are created automatically.
 [group_folders]
 # "Distribution alerts" = "Inbox/Triage/Distribution alerts"
 # "Uncategorized" = "Inbox/Triage/Uncategorized"

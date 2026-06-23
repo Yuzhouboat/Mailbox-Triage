@@ -1,6 +1,8 @@
-# Authentication Guidance
+# Authentication Guidance (Exchange)
 
 Use this when the mailbox is accessed through Exchange Web Services.
+
+For Gmail, see [gmail-authentication.md](gmail-authentication.md).
 
 ## Credential Source
 

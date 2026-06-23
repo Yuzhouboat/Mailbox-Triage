@@ -310,7 +310,8 @@ def execute_moves(config: Dict[str, Any], moves: List[Dict[str, Any]], folder_ma
 def main() -> int:
     args = parse_args()
     config_path = resolve_config_path(args.config)
-    config = read_simple_toml(config_path)
+    raw_config = read_simple_toml(config_path)
+    config = config_section(raw_config, "exchange") or raw_config
     require_fields(config, ["server", "username", "password"])
 
     messages_payload = load_json(Path(args.messages_json))
