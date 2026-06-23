@@ -104,17 +104,16 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
   - Flag any item that is high-priority or time-sensitive with `[Priority]`.
   - An item may carry both flags. Apply `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder), not just urgency words.
 
-7. After presenting the summary, automatically file unflagged messages:
+7. After presenting the summary, automatically file ALL messages (flagged and unflagged alike):
 
-   **[Exchange]** Build the group-assignment JSON including only messages NOT flagged as `[Priority]` or `[Follow-up needed]`. Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) with `--execute` directly (no preview step, no user confirmation required).
+   **[Exchange]** Build the group-assignment JSON including every message in the triage result set. Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) with `--execute` directly (no preview step, no user confirmation required).
 
-   **[Gmail]** For each unflagged message:
+   **[Gmail]** For each message:
    - Determine the target label name: use the group name, or the override from `[group_folders]` in config if present.
    - If the label does not exist, call the create-label tool to create it first.
    - Call the modify-message tool to add the target label and remove the `INBOX` label (this archives the message out of the inbox).
-   - Flagged messages (`[Priority]` or `[Follow-up needed]`) remain in Inbox with no label changes.
 
-   Report how many messages were filed and how many were left in the Inbox due to flags.
+   Report how many messages were filed.
 
 ## Helper Usage (Exchange)
 
@@ -217,8 +216,7 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 - Classify each message into exactly one group; use `Uncategorized` only when it fits no defined group.
 - Use the document-defined group headings as the canonical grouping taxonomy.
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
-- Automatically file unflagged messages after presenting the triage summary — no preview or confirmation step needed.
-- Never move or label messages that carry a `[Priority]` or `[Follow-up needed]` flag; leave them in the Inbox untouched.
+- Automatically file ALL messages after presenting the triage summary — no preview or confirmation step needed. Flags (`[Priority]`, `[Follow-up needed]`) do not block filing.
 - Only file messages already present in the current triage result set.
 - Treat out-of-office replies as low signal unless they block an active escalation path.
 - If the visible message body only shows an out-of-office response on top of a likely important thread, say that explicitly.
