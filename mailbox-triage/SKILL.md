@@ -113,7 +113,7 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
    **[Gmail]** Call the create-draft tool with:
   - `subject`: `"Triage Report: Gmail — <YYYY-MM-DD>"`
   - `body`: the full triage report text
-  - `to`: the account's own address (e.g. `yuzhouboat@gmail.com`)
+  - `to`: the account's own address (e.g. `you@gmail.com`)
    The draft sits in Drafts. Do not attempt to move it or apply labels — the Gmail API does not support label operations on draft IDs.
 
 ## Helper Usage (Exchange)

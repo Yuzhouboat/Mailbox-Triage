@@ -7,7 +7,7 @@
 # You can also override at runtime by saying "triage my Gmail" or "triage Exchange".
 
 [exchange]
-server = "east.exch081.serverdata.net"
+server = "exchange.example.com"
 username = "mailbox@example.com"
 password = "replace-me"
 
