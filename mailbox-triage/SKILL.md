@@ -1,7 +1,8 @@
 ---
-name: mailbox-triage
+
+## name: mailbox-triage
+
 description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, with custom business-group rules. Use for requests to review recent email, summarize mail by topic, classify mailbox messages into the defined heading groups (or an Uncategorized fallback), inspect attachments when they contain the real error details, produce grouped catch-up summaries with durable message identifiers, or automatically file unflagged messages into per-group folders or Gmail labels after triage.
----
 
 # Mailbox Triage
 
@@ -20,7 +21,7 @@ Install them with:
 python3 -m pip install --user exchangelib tzlocal
 ```
 
-**Gmail** — no Python dependencies. Gmail access uses the `mcp__claude_ai_Gmail__*` MCP tool directly; no script installation needed.
+**Gmail** — no Python dependencies. Gmail access uses the `mcp__claude_ai_Gmail__`* MCP tool directly; no script installation needed.
 
 ## Inputs
 
@@ -42,6 +43,7 @@ If the user provides custom rules in the thread, those override the bundled defa
 Read mailbox config from `~/mailbox-triage/mailbox-triage-config.toml`.
 
 The config uses TOML sections to declare which backends are available:
+
 - `[exchange]` section — Exchange Web Services. Requires `server`, `username`, `password`.
 - `[gmail]` section — Gmail via MCP. No password stored; authentication is OAuth.
 
@@ -58,83 +60,61 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
 ## Workflow
 
 1. Load the mailbox config. Determine which backend(s) are available:
-   - If only `[exchange]` is present → use Exchange.
-   - If only `[gmail]` is present → use Gmail.
-   - If both `[exchange]` and `[gmail]` are present → ask the user: "Which mailbox would you like to triage — Exchange or Gmail?" and proceed with their choice.
-   - If the user already said "triage my Gmail", "use Gmail", "triage Exchange", etc. in the session, use that choice without asking.
-
+  - If only `[exchange]` is present → use Exchange.
+  - If only `[gmail]` is present → use Gmail.
+  - If both `[exchange]` and `[gmail]` are present → ask the user: "Which mailbox would you like to triage — Exchange or Gmail?" and proceed with their choice.
+  - If the user already said "triage my Gmail", "use Gmail", "triage Exchange", etc. in the session, use that choice without asking.
 2. **[Exchange]** Run [scripts/triage_exchange_mailbox.py](scripts/triage_exchange_mailbox.py) to connect through Exchange Web Services.
-
-   **[Gmail]** Authenticate via the Gmail MCP tool if not already authenticated this session (see [references/gmail-authentication.md](references/gmail-authentication.md)). Then fetch messages using the Gmail list/search tool. Run two queries and combine the results:
-   - `in:inbox newer_than:1d` — Primary inbox tab
-   - `in:inbox newer_than:1d category:updates` — Updates tab (transactional emails, account alerts, confirmations)
-
+  **[Gmail]** Authenticate via the Gmail MCP tool if not already authenticated this session (see [references/gmail-authentication.md](references/gmail-authentication.md)). Then fetch messages using the Gmail list/search tool. Run two queries and combine the results:
+  - `in:inbox newer_than:1d` — Primary inbox tab
+  - `in:inbox newer_than:1d category:updates` — Updates tab (transactional emails, account alerts, confirmations)
    Do NOT query Promotions or Social tabs — those are excluded by default.
-
    For each thread returned, call the get-thread tool to retrieve headers and body. Normalize each result to the standard message shape:
-   - `sender` ← `From` header
-   - `subject` ← `Subject` header
-   - `received_at` ← `Date` header (ISO 8601)
-   - `is_read` ← `"UNREAD"` NOT in `labelIds`
-   - `body_text` ← decoded `text/plain` part or snippet
-   - `attachments` ← message parts with `filename` set
-   - `identifiers.gmail_id` ← Gmail message ID string
-   - `identifiers.message_id` ← `Message-ID` header
-
+  - `sender` ← `From` header
+  - `subject` ← `Subject` header
+  - `received_at` ← `Date` header (ISO 8601)
+  - `is_read` ← `"UNREAD"` NOT in `labelIds`
+  - `body_text` ← decoded `text/plain` part or snippet
+  - `attachments` ← message parts with `filename` set
+  - `identifiers.gmail_id` ← Gmail message ID string
+  - `identifiers.message_id` ← `Message-ID` header
 3. Query Inbox for only the messages needed for the requested window. With no scope from the user, default to the last 24 hours (all emails, read and unread). Override mapping for Gmail:
 
-   | User asks for | Gmail query addition |
-   |---|---|
-   | Default (24h) | `newer_than:1d` (applied to both inbox and updates queries) |
-   | This week | `newer_than:7d` |
-   | Unread only | add `is:unread` |
-   | Custom date | `after:YYYY/MM/DD` |
+  | User asks for | Gmail query addition                                        |
+  | ------------- | ----------------------------------------------------------- |
+  | Default (24h) | `newer_than:1d` (applied to both inbox and updates queries) |
+  | This week     | `newer_than:7d`                                             |
+  | Unread only   | add `is:unread`                                             |
+  | Custom date   | `after:YYYY/MM/DD`                                          |
 
 4. If a message body indicates the real error details are in an attachment, inspect the attachment before final classification. See [Attachment Handling](#attachment-handling).
-
 5. Classify each message into exactly one group:
   - Use the group headings defined in `~/mailbox-triage/triage-rules.md`.
   - If a message fits no defined group, assign it to the default group `Uncategorized`.
   - Every message ends up in exactly one group — a defined group or `Uncategorized`.
-
 6. Within each group, consolidate and summarize:
   - Cluster messages that share the same root cause, sender pattern, or topic thread into a single grouped item. Show a count when collapsing repeated alerts (e.g. "3 suppression notices from Bookwire").
   - For each item (single message or cluster), write a one-to-two sentence plain-English summary of what it is about and what — if anything — it requires.
   - Flag any item that needs a follow-up action with `[Follow-up needed]`.
   - Flag any item that is high-priority or time-sensitive with `[Priority]`.
   - An item may carry both flags. Apply `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder), not just urgency words.
-
 7. After presenting the summary, automatically file ALL messages (flagged and unflagged alike):
-
-   **[Exchange]** Build the group-assignment JSON including every message in the triage result set. Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) with `--execute` directly (no preview step, no user confirmation required).
-
+  **[Exchange]** Build the group-assignment JSON including every message in the triage result set. Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) with `--execute` directly (no preview step, no user confirmation required).
    **[Gmail]** For each message:
-   - Determine the target label name: use the group name, or the override from `[group_folders]` in config if present.
-   - If the label does not exist, call the create-label tool to create it first.
-   - Call the modify-message tool to add the target label and remove the `INBOX` label (this archives the message out of the inbox).
-
+  - Determine the target label name: use the group name, or the override from `[group_folders]` in config if present.
+  - If the label does not exist, call the create-label tool to create it first.
+  - Call the modify-message tool to add the target label and remove the `INBOX` label (this archives the message out of the inbox).
    Report how many messages were filed.
-
-8. After filing, save the triage summary report directly into a dedicated folder/label so the user has a persistent record of each triage session. No email is sent; the report is written straight into the mailbox.
-
-   **[Exchange]** Run [scripts/send_triage_report.py](scripts/send_triage_report.py), passing the report text via stdin:
-
-   ```bash
-   python3 scripts/send_triage_report.py \
-     --subject "Triage Report: <mailbox> — <YYYY-MM-DD>" \
-     <<'EOF'
-   <full triage report text>
-   EOF
-   ```
-
-   The script saves the message directly into the `"Triage Reports"` folder (sibling of Inbox), creating that folder if it does not yet exist. Nothing is sent or copied to Sent Items.
-
-   **[Gmail]** Call the create-label tool to ensure a `"Triage Reports"` label exists, then call the create-draft tool with:
-   - `subject`: `"Triage Report: Gmail — <YYYY-MM-DD>"`
-   - `body`: the full triage report text
-   - `to`: the account's own address (e.g. `yuzhouboat@gmail.com`)
-
-   Immediately after creating the draft, apply the `"Triage Reports"` label to it and remove the `DRAFT` system label so it sits in the label rather than cluttering the Drafts folder.
+8. After filing, save the triage summary report as a draft so the user has a persistent record of each triage session. No email is sent.
+  **[Exchange]** Run [scripts/send_triage_report.py](scripts/send_triage_report.py) with:
+  - `--subject "Triage Report: Exchange — <YYYY-MM-DD>"`
+  - `--body` the full triage report text
+   The draft is saved to Drafts. Do not attempt to move it to any folder.
+   **[Gmail]** Call the create-draft tool with:
+  - `subject`: `"Triage Report: Gmail — <YYYY-MM-DD>"`
+  - `body`: the full triage report text
+  - `to`: the account's own address (e.g. `yuzhouboat@gmail.com`)
+   The draft sits in Drafts. Do not attempt to move it or apply labels — the Gmail API does not support label operations on draft IDs.
 
 ## Helper Usage (Exchange)
 
@@ -239,16 +219,18 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
 - Automatically file ALL messages after presenting the triage summary — no preview or confirmation step needed. Flags (`[Priority]`, `[Follow-up needed]`) do not block filing.
 - Only file messages already present in the current triage result set.
-- After filing, always save the triage report into the "Triage Reports" folder (Exchange) or label (Gmail) — no send, no user confirmation needed.
+- After filing, always save the triage report as a draft: Exchange → create a draft in Drafts (no folder move, no send); Gmail → create a draft (no label, no send, no user confirmation needed).
 - Treat out-of-office replies as low signal unless they block an active escalation path.
 - If the visible message body only shows an out-of-office response on top of a likely important thread, say that explicitly.
 
 **Exchange-specific:**
+
 - Use the Exchange helper instead of browser or OWA workflows for reading messages and attachments.
 - Use the move helper instead of ad hoc shell snippets when filing classified messages into group folders.
 - Always identify Exchange messages using durable identifiers (EWS item id, message id, sender, subject, received time). Never include mailbox URLs or links in the output.
 
 **Gmail-specific:**
+
 - Use the Gmail MCP tools as the canonical access path for Gmail messages and attachments — never use browser or direct API calls.
 - Auto-create missing Gmail labels when filing messages; do not fail or skip when a label does not yet exist.
 - Use the Gmail message `id` (the stable opaque string from the API) as the durable identifier for Gmail messages in output.
