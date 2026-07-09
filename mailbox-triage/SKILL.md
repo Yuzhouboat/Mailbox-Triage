@@ -65,11 +65,17 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
   - If both `[exchange]` and `[gmail]` are present → ask the user: "Which mailbox would you like to triage — Exchange or Gmail?" and proceed with their choice.
   - If the user already said "triage my Gmail", "use Gmail", "triage Exchange", etc. in the session, use that choice without asking.
 2. **[Exchange]** Run [scripts/triage_exchange_mailbox.py](scripts/triage_exchange_mailbox.py) to connect through Exchange Web Services.
-  **[Gmail]** Authenticate via the Gmail MCP tool if not already authenticated this session (see [references/gmail-authentication.md](references/gmail-authentication.md)). Then fetch messages using the Gmail list/search tool. Run two queries and combine the results:
-  - `in:inbox newer_than:1d` — Primary inbox tab
-  - `in:inbox newer_than:1d category:updates` — Updates tab (transactional emails, account alerts, confirmations)
-   Do NOT query Promotions or Social tabs — those are excluded by default.
-   For each thread returned, call the get-thread tool to retrieve headers and body. Normalize each result to the standard message shape:
+  **[Gmail]** Authenticate via the Gmail MCP tool if not already authenticated this session (see [references/gmail-authentication.md](references/gmail-authentication.md)). Then fetch messages using the Gmail list/search tool. Run two queries and collect all thread IDs before calling get-thread:
+
+  **For each query** (`in:inbox newer_than:1d` and `in:inbox newer_than:1d category:updates`):
+  1. Call `search_threads` with `pageSize: 50`.
+  2. Add every returned thread ID to the working set.
+  3. If the response contains a `nextPageToken`, call `search_threads` again with that token and repeat until no `nextPageToken` is returned. Fetch all pages — do not stop early.
+  4. Do NOT query Promotions or Social tabs — those are excluded by default.
+
+  After both queries complete, deduplicate the working set by thread ID (a thread ID that appeared in both queries is included only once). The deduplicated set is the full thread list for this triage run.
+
+  For each thread ID in the deduplicated set, call the get-thread tool to retrieve headers and body. Normalize each result to the standard message shape:
   - `sender` ← `From` header
   - `subject` ← `Subject` header
   - `received_at` ← `Date` header (ISO 8601)
@@ -166,7 +172,7 @@ Always pass `--execute` when running the move helper during triage — unflagged
 
 Gmail access uses the `mcp__claude_ai_Gmail__*` MCP tools directly — no Python script is involved. The exact tool names become visible after authentication completes. The operations used during triage are:
 
-- **list/search** — two queries: `in:inbox newer_than:1d` and `in:inbox newer_than:1d category:updates` (Promotions and Social are not checked)
+- **list/search** — two queries: `in:inbox newer_than:1d` and `in:inbox newer_than:1d category:updates` (Promotions and Social are not checked); paginate each query using `nextPageToken` until all pages are exhausted
 - **get-message** — retrieve headers, body, and part metadata for each message ID
 - **get-attachment** — retrieve a specific attachment by message ID and attachment ID
 - **modify-message** — add/remove labels (used for filing)
