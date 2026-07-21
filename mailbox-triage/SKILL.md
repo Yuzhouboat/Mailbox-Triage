@@ -1,8 +1,7 @@
 ---
-
-## name: mailbox-triage
-
-description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, with custom business-group rules. Use for requests to review recent email, summarize mail by topic, classify mailbox messages into the defined heading groups (or an Uncategorized fallback), inspect attachments when they contain the real error details, produce grouped catch-up summaries with durable message identifiers, or automatically file unflagged messages into per-group folders or Gmail labels after triage.
+name: mailbox-triage
+description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, with custom business-group rules. Use for requests to review recent email, summarize mail by topic, classify mailbox messages into defined heading groups or an Uncategorized fallback, inspect attachments containing error details, produce grouped catch-up summaries with durable message identifiers, or file messages into per-group folders or Gmail labels after triage.
+---
 
 # Mailbox Triage
 
@@ -100,11 +99,12 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
   - Every message ends up in exactly one group — a defined group or `Uncategorized`.
 6. Within each group, consolidate and summarize:
   - Cluster messages that share the same root cause, sender pattern, or topic thread into a single grouped item. Show a count when collapsing repeated alerts (e.g. "3 suppression notices from Bookwire").
+  - Preserve the exact `subject` value from the mailbox payload for every message represented in the report. For a single message, show its verbatim subject. For a cluster, list every distinct verbatim subject and the count for each repeated subject; do not replace the original subjects with an inferred topic label.
   - For each item (single message or cluster), write a one-to-two sentence plain-English summary of what it is about and what — if anything — it requires.
   - Flag any item that needs a follow-up action with `[Follow-up needed]`.
   - Flag any item that is high-priority or time-sensitive with `[Priority]`.
   - An item may carry both flags. Apply `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder), not just urgency words.
-7. After presenting the summary, automatically file ALL messages (flagged and unflagged alike):
+7. After presenting the summary, automatically file ALL messages (flagged and unflagged alike). This step always runs immediately after the summary is presented — do not pause to ask the user for permission or confirmation first, and do not treat the presence of `[Priority]` or `[Follow-up needed]` items (including P1 - Urgent items) as a reason to hold off. Filing only labels/moves messages out of the inbox; it never deletes anything or blocks the user from acting on flagged items afterward, so there is no risk that warrants a check-in:
   **[Exchange]** Build the group-assignment JSON including every message in the triage result set. Run [scripts/move_triaged_messages.py](scripts/move_triaged_messages.py) with `--execute` directly (no preview step, no user confirmation required).
    **[Gmail]** For each message:
   - Determine the target label name: use the group name, or the override from `[group_folders]` in config if present.
@@ -208,13 +208,24 @@ titled with the exact group heading from `~/mailbox-triage/triage-rules.md`, plu
 
 For each reported item (single message or consolidated cluster), include:
 
-- `[Priority]` and/or `[Follow-up needed]` flags when applicable, on the same line as the subject
+- `[Priority]` and/or `[Follow-up needed]` flags when applicable
 - sender (or sender pattern for clusters)
-- subject (or shared topic for clusters), with a count when multiple messages are collapsed
+- a clearly labeled `Subject:` field containing the exact, unmodified subject from the mailbox payload; use `Subject: (no subject)` when the header is empty
+- for a cluster with different subjects, a `Subjects:` list containing every distinct exact subject and a per-subject count; never substitute only a shared topic or paraphrase
 - received timestamp when helpful
 - durable identifiers such as EWS item id or message id
 - one-to-two sentence plain-English summary of what the message is about
 - concrete follow-up action if one is required (omit this line when no action is needed)
+
+Treat the subject as required identifying information, not as part of the prose summary. Keep it verbatim so the user can paste it into mailbox search. A concise item may follow this pattern:
+
+```text
+[Follow-up needed] Sender: sender@example.com
+Subject: Exact subject copied from the message
+Received: 2026-07-21T09:30:00-04:00 | Message ID: <durable-id>
+Summary: Plain-English explanation.
+Action: Concrete next step.
+```
 
 Order `Uncategorized` last so unmatched messages are easy to scan and reclassify.
 
@@ -223,7 +234,7 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 - Classify each message into exactly one group; use `Uncategorized` only when it fits no defined group.
 - Use the document-defined group headings as the canonical grouping taxonomy.
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.
-- Automatically file ALL messages after presenting the triage summary — no preview or confirmation step needed. Flags (`[Priority]`, `[Follow-up needed]`) do not block filing.
+- Automatically file ALL messages after presenting the triage summary — no preview or confirmation step needed, and no pausing to ask the user first. Flags (`[Priority]`, `[Follow-up needed]`), including P1 - Urgent items, do not block or delay filing — this is a settled default for this skill, not a per-run judgment call.
 - Only file messages already present in the current triage result set.
 - After filing, always save the triage report as a draft: Exchange → create a draft in Drafts (no folder move, no send); Gmail → create a draft (no label, no send, no user confirmation needed). Saving a draft is a local mailbox filing action, not an outbound submission — it writes only to the user's own Drafts folder and does not transmit anything externally. Run `scripts/send_triage_report.py` without asking for permission.
 - Treat out-of-office replies as low signal unless they block an active escalation path.
@@ -240,4 +251,3 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 - Use the Gmail MCP tools as the canonical access path for Gmail messages and attachments — never use browser or direct API calls.
 - Auto-create missing Gmail labels when filing messages; do not fail or skip when a label does not yet exist.
 - Use the Gmail message `id` (the stable opaque string from the API) as the durable identifier for Gmail messages in output.
-

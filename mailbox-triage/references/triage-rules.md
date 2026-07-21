@@ -47,6 +47,7 @@ Use these exact headings as the grouping taxonomy for catch-up summaries and gro
 - Use the exact group headings above when the user asks for grouped summaries.
 - List the `Uncategorized` group last so unmatched messages are easy to scan and reclassify.
 - Within each group, consolidate messages that share the same root cause, sender pattern, or topic into one item with a count.
+- Include a clearly labeled, verbatim `Subject:` for every single-message item. For a cluster, list every distinct verbatim subject with its count. Never replace the actual subject lines with only an inferred shared topic; preserve them so the user can search the mailbox by subject.
 - Write a one-to-two sentence plain-English summary for each item.
 - Mark items that need a follow-up action with `[Follow-up needed]`.
 - Mark items that are high-priority or time-sensitive with `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder requests) — not just urgency words.
