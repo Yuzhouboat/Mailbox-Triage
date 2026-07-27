@@ -46,10 +46,10 @@ Use these exact headings as the grouping taxonomy for catch-up summaries and gro
 
 - Use the exact group headings above when the user asks for grouped summaries.
 - List the `Uncategorized` group last so unmatched messages are easy to scan and reclassify.
-- Within each group, consolidate messages that share the same root cause, sender pattern, or topic into one item with a count.
-- Include a clearly labeled, verbatim `Subject:` for every single-message item. For a cluster, list every distinct verbatim subject with its count. Never replace the actual subject lines with only an inferred shared topic; preserve them so the user can search the mailbox by subject.
+- Within each priority heading, consolidate repeated or closely related messages that share the same root cause, sender pattern, or topic. Do not consolidate unrelated messages merely because they share a P1/P2/P3/P4 heading.
+- For each cluster, select one representative message, preferring the clearest subject and most informative body. Show only its sender and verbatim `Subject:`, append the total similar-message count as `(xN)`, and omit all other emails and subjects in that cluster. For a single-message item, show its sender and verbatim subject without a count.
 - Write a one-to-two sentence plain-English summary for each item.
 - Mark items that need a follow-up action with `[Follow-up needed]`.
 - Mark items that are high-priority or time-sensitive with `[Priority]` based on business impact (suppression risk, named deadlines, revenue impact, key stakeholder requests) — not just urgency words.
-- Identify messages using sender, subject, timestamp, and durable identifiers (EWS item id or message id). Never include mailbox URLs or links in the output.
+- Use sender, subject, timestamp, and durable identifiers (EWS item ID or message ID) internally for deduplication and filing. In the user-facing report and saved draft, identify messages only by sender and exact subject; never include timestamps, message identifiers, mailbox URLs, or links.
 - When the root cause is in an attachment, keep classification provisional until the attachment is inspected.

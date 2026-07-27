@@ -1,6 +1,6 @@
 ---
 name: mailbox-triage
-description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, with custom business-group rules. Use for requests to review recent email, summarize mail by topic, classify mailbox messages into defined heading groups or an Uncategorized fallback, inspect attachments containing error details, produce grouped catch-up summaries with durable message identifiers, or file messages into per-group folders or Gmail labels after triage.
+description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, with custom business-group rules. Use for requests to review recent email, summarize mail by topic, classify mailbox messages into defined heading groups or an Uncategorized fallback, inspect attachments containing error details, produce consolidated catch-up summaries, or file messages into per-group folders or Gmail labels after triage.
 ---
 
 # Mailbox Triage
@@ -98,8 +98,9 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
   - If a message fits no defined group, assign it to the default group `Uncategorized`.
   - Every message ends up in exactly one group — a defined group or `Uncategorized`.
 6. Within each group, consolidate and summarize:
-  - Cluster messages that share the same root cause, sender pattern, or topic thread into a single grouped item. Show a count when collapsing repeated alerts (e.g. "3 suppression notices from Bookwire").
-  - Preserve the exact `subject` value from the mailbox payload for every message represented in the report. For a single message, show its verbatim subject. For a cluster, list every distinct verbatim subject and the count for each repeated subject; do not replace the original subjects with an inferred topic label.
+  - Cluster messages that are repeated or share the same root cause, sender pattern, or topic thread into a single grouped item. Do not cluster unrelated messages merely because they share the same P1/P2/P3/P4 heading.
+  - For each cluster, select one representative message, preferring the clearest subject and most informative body. Show only that message's sender and exact verbatim subject, followed by the total cluster count as `(xN)`. Do not list the other messages or their subjects.
+  - For a single-message item, show its sender and exact verbatim subject without a count.
   - For each item (single message or cluster), write a one-to-two sentence plain-English summary of what it is about and what — if anything — it requires.
   - Flag any item that needs a follow-up action with `[Follow-up needed]`.
   - Flag any item that is high-priority or time-sensitive with `[Priority]`.
@@ -111,7 +112,7 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
   - If the label does not exist, call the create-label tool to create it first.
   - Call the modify-message tool to add the target label and remove the `INBOX` label (this archives the message out of the inbox).
    Report how many messages were filed.
-8. After filing, save the triage summary report as a draft so the user has a persistent record of each triage session. This is a local mailbox filing action — no email is sent and no outbound submission occurs. The script only creates a draft item inside the user's own Drafts folder on their own mailbox server.
+8. After filing, save the triage summary report as a draft so the user has a persistent record of each triage session. Exclude received timestamps and all message identifiers (including EWS item IDs, Gmail IDs, and Message-ID headers) from the draft body. Retain those values only in the working data used for deduplication and filing. This is a local mailbox filing action — no email is sent and no outbound submission occurs. The script only creates a draft item inside the user's own Drafts folder on their own mailbox server.
   **[Exchange]** Run [scripts/send_triage_report.py](scripts/send_triage_report.py) with:
   - `--subject "Triage Report: Exchange — <YYYY-MM-DD>"`
   - `--body` the full triage report text
@@ -209,20 +210,19 @@ titled with the exact group heading from `~/mailbox-triage/triage-rules.md`, plu
 For each reported item (single message or consolidated cluster), include:
 
 - `[Priority]` and/or `[Follow-up needed]` flags when applicable
-- sender (or sender pattern for clusters)
+- sender from the single message or selected representative message
 - a clearly labeled `Subject:` field containing the exact, unmodified subject from the mailbox payload; use `Subject: (no subject)` when the header is empty
-- for a cluster with different subjects, a `Subjects:` list containing every distinct exact subject and a per-subject count; never substitute only a shared topic or paraphrase
-- received timestamp when helpful
-- durable identifiers such as EWS item id or message id
+- for a cluster, append the total number of similar messages as `(xN)` to the representative subject; do not list the remaining subjects or emails
 - one-to-two sentence plain-English summary of what the message is about
 - concrete follow-up action if one is required (omit this line when no action is needed)
+
+Never include received timestamps or message identifiers in the user-facing report or saved draft. Keep those values only in internal working data when needed for deduplication, attachment retrieval, or filing.
 
 Treat the subject as required identifying information, not as part of the prose summary. Keep it verbatim so the user can paste it into mailbox search. A concise item may follow this pattern:
 
 ```text
 [Follow-up needed] Sender: sender@example.com
-Subject: Exact subject copied from the message
-Received: 2026-07-21T09:30:00-04:00 | Message ID: <durable-id>
+Subject: Exact representative subject copied from the message (x4)
 Summary: Plain-English explanation.
 Action: Concrete next step.
 ```
@@ -244,10 +244,10 @@ Order `Uncategorized` last so unmatched messages are easy to scan and reclassify
 
 - Use the Exchange helper instead of browser or OWA workflows for reading messages and attachments.
 - Use the move helper instead of ad hoc shell snippets when filing classified messages into group folders.
-- Always identify Exchange messages using durable identifiers (EWS item id, message id, sender, subject, received time). Never include mailbox URLs or links in the output.
+- Use durable Exchange identifiers, sender, subject, and received time internally to deduplicate, retrieve, and file messages. Do not expose timestamps, identifiers, mailbox URLs, or links in the user-facing report or saved draft.
 
 **Gmail-specific:**
 
 - Use the Gmail MCP tools as the canonical access path for Gmail messages and attachments — never use browser or direct API calls.
 - Auto-create missing Gmail labels when filing messages; do not fail or skip when a label does not yet exist.
-- Use the Gmail message `id` (the stable opaque string from the API) as the durable identifier for Gmail messages in output.
+- Use the Gmail message `id` internally as the durable identifier for deduplication, retrieval, and filing. Do not expose it in the user-facing report or saved draft.
