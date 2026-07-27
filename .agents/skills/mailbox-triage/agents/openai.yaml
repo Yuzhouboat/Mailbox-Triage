@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mailbox Triage"
+  short_description: "Triage and file Exchange or Gmail messages"
+  default_prompt: "Use $mailbox-triage to review, classify, summarize, and file my recent mailbox messages."

@@ -2,6 +2,14 @@
 
 An AI agent workflow for triaging your email inbox — Exchange or Gmail — with automated classification, filing, and session draft reports. Works with any AI coding agent that can read context files and run shell commands, including Claude Code, OpenAI Codex, Cursor, and others.
 
+## Register the skill globally
+
+Open this repository in your agent and use this prompt:
+
+```text
+Register the mailbox-triage skill in this repository globally using a symbolic link so it is available in every project and future agent session on this machine. The source skill directory is .agents/skills/mailbox-triage. Detect the global skills directory supported by the current agent, create or update a mailbox-triage symlink using the absolute source path, do not overwrite a real directory without asking, verify that SKILL.md is readable through the link, and tell me whether I need to restart the agent or open a new session.
+```
+
 ## What it does
 
 - Fetches the last 24 hours of inbox mail (configurable window)
@@ -24,19 +32,23 @@ python3 -m pip install --user exchangelib tzlocal
 1. Copy the example config and fill in your credentials:
    ```bash
    mkdir -p ~/mailbox-triage
-   cp mailbox-triage/config/mailbox-config.toml.example ~/mailbox-triage/mailbox-triage-config.toml
+   cp .agents/skills/mailbox-triage/config/mailbox-config.toml.example ~/mailbox-triage/mailbox-triage-config.toml
    ```
    Edit `~/mailbox-triage/mailbox-triage-config.toml` and set your `server`, `username`, and `password` (Exchange) or leave the `[gmail]` section as-is for OAuth.
 
 2. (Optional) Customize triage rules:
    ```bash
-   cp mailbox-triage/references/triage-rules.md ~/mailbox-triage/triage-rules.md
+   cp .agents/skills/mailbox-triage/references/triage-rules.md ~/mailbox-triage/triage-rules.md
    ```
    Edit `~/mailbox-triage/triage-rules.md` to adjust group definitions and priority criteria.
 
-3. Point your agent at the workflow instructions in `mailbox-triage/SKILL.md`. How to do this depends on your agent:
-   - **Claude Code** — the `SKILL.md` file is picked up automatically as a skill
-   - **Other agents (Codex, Cursor, etc.)** — paste the contents of `SKILL.md` into your system prompt, or reference it in your agent's context/instruction file
+3. Open the repository as your project. Compatible agents discover the skill automatically from `.agents/skills/mailbox-triage/SKILL.md`.
+
+   You can also invoke it explicitly:
+
+   ```text
+   Use $mailbox-triage to triage my inbox.
+   ```
 
 ## Usage
 
@@ -58,7 +70,7 @@ The agent will fetch, classify, file, and summarize your inbox automatically. Th
 
 ## Configuration
 
-See [`mailbox-triage/config/mailbox-config.toml.example`](mailbox-triage/config/mailbox-config.toml.example) for all available options, including:
+See [`.agents/skills/mailbox-triage/config/mailbox-config.toml.example`](.agents/skills/mailbox-triage/config/mailbox-config.toml.example) for all available options, including:
 
 - `[exchange]` — server, username, password, optional shared mailbox address
 - `[gmail]` — OAuth only, no password stored

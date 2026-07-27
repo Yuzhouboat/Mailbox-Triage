@@ -11,7 +11,7 @@ __pycache__/
 *.pyo
 
 # Local config with secrets (keep the .example template tracked)
-mailbox-triage/config/mailbox-config.toml
+.agents/skills/mailbox-triage/config/mailbox-config.toml
 mailbox-config.toml
 
 # Editor / OS noise
