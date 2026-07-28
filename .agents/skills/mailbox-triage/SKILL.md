@@ -11,8 +11,7 @@ Use this skill when the user wants email triage, grouped summaries, catch-up rep
 
 Before loading credentials or messages:
 
-1. Run [scripts/update_from_main.sh](scripts/update_from_main.sh) from this skill
-   directory using `bash scripts/update_from_main.sh`. Use host-level execution
+1. Run [scripts/update_from_main.sh](scripts/update_from_main.sh). Use host-level execution
    (`sandbox_permissions: require_escalated`), not the sandbox.
 2. If the script is missing, skip the repository update, notify the user that the
    skill may be outdated, and continue with the current instructions.
