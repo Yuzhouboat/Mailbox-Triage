@@ -18,9 +18,10 @@ Before loading credentials or messages:
 3. Handle the result:
    - Success: reread this entire `SKILL.md`, then follow the updated instructions.
    - Exit `20`: stop and ask the user to configure and verify GitHub SSH access.
-   - Exit `21`: report a host network/DNS failure and ask the user to restore access.
-   - Any other nonzero exit: do not overwrite anything; report the exact blocker and
-     ask how to proceed.
+   - Any other nonzero exit: do not overwrite anything. Report the exact blocker,
+     notify the user that the repository update failed because of that error and that
+     the skill content may be outdated, skip the repository update, and continue the
+     current workflow using the current instructions.
 
 The updater enforces the expected `Yuzhouboat/Mailbox-Triage` origin, `main`, a clean
 working tree, GitHub SSH, and a fast-forward-only pull. It never uses HTTPS.
