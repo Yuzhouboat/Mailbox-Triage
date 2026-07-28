@@ -7,7 +7,7 @@ An AI agent workflow for triaging your email inbox — Exchange or Gmail — wit
 Open this repository in your agent and use this prompt:
 
 ```text
-Register the mailbox-triage skill in this repository globally using a symbolic link so it is available in every project and future agent session on this machine. The source skill directory is .agents/skills/mailbox-triage. Detect the global skills directory supported by the current agent, create or update a mailbox-triage symlink using the absolute source path, do not overwrite a real directory without asking, verify that SKILL.md is readable through the link, and tell me whether I need to restart the agent or open a new session.
+Register the mailbox-triage skill in this repository globally using a symbolic link so it is available in every project and future agent session on this machine. The repository root is the skill directory and contains SKILL.md. Detect the global skills directory supported by the current agent, create or update a mailbox-triage symlink using the absolute source path, do not overwrite a real directory without asking, verify that SKILL.md is readable through the link, and tell me whether I need to restart the agent or open a new session.
 ```
 
 ## What it does
