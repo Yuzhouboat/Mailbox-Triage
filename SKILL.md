@@ -20,8 +20,12 @@ Before loading credentials or messages:
    - Exit `20`: stop and ask the user to configure and verify GitHub SSH access.
    - Any other nonzero exit: do not overwrite anything. Report the exact blocker,
      notify the user that the repository update failed because of that error and that
-     the skill content may be outdated, skip the repository update, and continue the
-     current workflow using the current instructions.
+     the skill content may be outdated, and include the updater's version-lag result.
+     The updater reports one version per commit behind current `main`; when GitHub
+     cannot be reached, it uses cached `origin/main` and labels the result accordingly.
+     If neither comparison is available, report that the version lag is unavailable.
+     Skip the repository update and continue the current workflow using the current
+     instructions.
 
 The updater enforces the expected `Yuzhouboat/Mailbox-Triage` origin, `main`, a clean
 working tree, GitHub SSH, and a fast-forward-only pull. It never uses HTTPS.

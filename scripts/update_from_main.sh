@@ -6,6 +6,54 @@ readonly EXPECTED_ORIGIN_HTTPS="https://github.com/Yuzhouboat/Mailbox-Triage"
 readonly EXPECTED_ORIGIN_SSH="git@github.com:Yuzhouboat/Mailbox-Triage.git"
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root=""
+
+report_update_lag() {
+  local comparison_ref=""
+  local comparison_name=""
+  local behind_count=""
+
+  if [[ -z "${repo_root}" ]] || ! git -C "${repo_root}" rev-parse --verify HEAD >/dev/null 2>&1; then
+    echo "Version lag unavailable: the local skill is not in a usable Git checkout." >&2
+    return
+  fi
+
+  # FETCH_HEAD gives an exact comparison without changing the working tree or
+  # any local/remote-tracking branch. Disable prompts so failure reporting
+  # cannot hang when SSH credentials are the original blocker.
+  if GIT_TERMINAL_PROMPT=0 git -C "${repo_root}" fetch --quiet --no-tags \
+    "${EXPECTED_ORIGIN_SSH}" refs/heads/main >/dev/null 2>&1; then
+    comparison_ref="FETCH_HEAD"
+    comparison_name="current main"
+  elif git -C "${repo_root}" rev-parse --verify refs/remotes/origin/main >/dev/null 2>&1; then
+    comparison_ref="refs/remotes/origin/main"
+    comparison_name="cached origin/main (current GitHub state could not be verified)"
+  else
+    echo "Version lag unavailable: neither current main nor cached origin/main could be read." >&2
+    return
+  fi
+
+  if ! behind_count="$(git -C "${repo_root}" rev-list --count "HEAD..${comparison_ref}" 2>/dev/null)"; then
+    echo "Version lag unavailable: Git could not compare the local skill with ${comparison_name}." >&2
+    return
+  fi
+
+  echo "Local skill is ${behind_count} version(s) behind ${comparison_name} (one version per commit)." >&2
+}
+
+finish() {
+  local status=$?
+
+  if (( status != 0 )); then
+    report_update_lag
+  fi
+
+  if [[ -n "${ssh_error_file:-}" ]]; then
+    rm -f -- "${ssh_error_file}"
+  fi
+}
+
+trap finish EXIT
 
 if ! repo_root="$(git -C "${script_dir}" rev-parse --show-toplevel 2>/dev/null)"; then
   echo "Self-update unavailable: this skill is not inside a Git checkout." >&2
@@ -38,7 +86,6 @@ if [[ -n "$(git -C "${repo_root}" status --porcelain)" ]]; then
 fi
 
 ssh_error_file="$(mktemp "${TMPDIR:-/tmp}/mailbox-triage-ssh.XXXXXX")"
-trap 'rm -f -- "${ssh_error_file}"' EXIT
 
 if ! git ls-remote --exit-code "${EXPECTED_ORIGIN_SSH}" refs/heads/main >/dev/null 2>"${ssh_error_file}"; then
   if grep -Eqi \
