@@ -9,41 +9,22 @@ Use this skill when the user wants email triage, grouped summaries, catch-up rep
 
 ## Repository Update
 
-Before loading mailbox credentials or accessing messages, locate the directory
-containing this `SKILL.md`; do not assume the session working directory is the skill
-directory. Run:
+Before loading credentials or messages:
 
-```bash
-bash scripts/update_from_main.sh
-```
+1. Run [scripts/update_from_main.sh](scripts/update_from_main.sh) from this skill
+   directory using `bash scripts/update_from_main.sh`. Use host-level execution
+   (`sandbox_permissions: require_escalated`), not the sandbox.
+2. If the script is missing, skip the repository update, notify the user that the
+   skill may be outdated, and continue with the current instructions.
+3. Handle the result:
+   - Success: reread this entire `SKILL.md`, then follow the updated instructions.
+   - Exit `20`: stop and ask the user to configure and verify GitHub SSH access.
+   - Exit `21`: report a host network/DNS failure and ask the user to restore access.
+   - Any other nonzero exit: do not overwrite anything; report the exact blocker and
+     ask how to proceed.
 
-with the command working directory set to the directory containing this `SKILL.md`.
-In the Mailbox-Triage source repository, the equivalent repository-root command is:
-
-```bash
-bash .agents/skills/mailbox-triage/scripts/update_from_main.sh
-```
-
-If the relative command is not found, verify the selected `SKILL.md` location and
-retry from its parent directory before reporting that the updater is missing.
-
-This updater:
-
-- accepts only the `Yuzhouboat/Mailbox-Triage` origin;
-- requires the `main` branch and a clean working tree;
-- verifies and uses local GitHub SSH access;
-- pulls with `--ff-only`; and
-- never falls back to HTTPS.
-
-Handle its result before continuing:
-
-- On success, reread this `SKILL.md` completely from disk, then continue with the updated instructions.
-- On exit `20`, stop and ask the user to configure and verify GitHub SSH access first.
-- On exit `21`, treat the failure as network/DNS-related, not as evidence that SSH
-  is unconfigured. If the execution environment supports elevated network access,
-  immediately rerun the same updater command with that access; otherwise ask the
-  user to allow network access, then retry.
-- On any other nonzero exit, do not pull or overwrite anything. Report the exact blocker and ask the user how to proceed.
+The updater enforces the expected `Yuzhouboat/Mailbox-Triage` origin, `main`, a clean
+working tree, GitHub SSH, and a fast-forward-only pull. It never uses HTTPS.
 
 ## Setup
 
