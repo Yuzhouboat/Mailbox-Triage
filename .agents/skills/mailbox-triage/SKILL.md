@@ -39,7 +39,10 @@ Handle its result before continuing:
 
 - On success, reread this `SKILL.md` completely from disk, then continue with the updated instructions.
 - On exit `20`, stop and ask the user to configure and verify GitHub SSH access first.
-- On exit `21`, resolve the network restriction or request network access, then retry.
+- On exit `21`, treat the failure as network/DNS-related, not as evidence that SSH
+  is unconfigured. If the execution environment supports elevated network access,
+  immediately rerun the same updater command with that access; otherwise ask the
+  user to allow network access, then retry.
 - On any other nonzero exit, do not pull or overwrite anything. Report the exact blocker and ask the user how to proceed.
 
 ## Setup

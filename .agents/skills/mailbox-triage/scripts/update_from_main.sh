@@ -42,7 +42,16 @@ trap 'rm -f -- "${ssh_error_file}"' EXIT
 
 if ! git ls-remote --exit-code "${EXPECTED_ORIGIN_SSH}" refs/heads/main >/dev/null 2>"${ssh_error_file}"; then
   if grep -Eqi \
-    'permission denied \(publickey\)|host key verification failed|could not read from remote repository|repository not found' \
+    'could not resolve hostname|temporary failure in name resolution|name or service not known|network is unreachable|no route to host|connection (timed out|refused)|operation timed out' \
+    "${ssh_error_file}"; then
+    echo "Could not reach GitHub over SSH because of a network or DNS failure." >&2
+    echo "Resolve the network restriction or request network access, then retry." >&2
+    cat "${ssh_error_file}" >&2
+    exit 21
+  fi
+
+  if grep -Eqi \
+    'permission denied \(publickey\)|host key verification failed|repository not found' \
     "${ssh_error_file}"; then
     echo "GitHub SSH access is not ready for ${EXPECTED_ORIGIN_SSH}." >&2
     echo "Ask the user to configure and verify local GitHub SSH access before continuing. Do not fall back to HTTPS." >&2
