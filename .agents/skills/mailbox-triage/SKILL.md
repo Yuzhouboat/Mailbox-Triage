@@ -7,6 +7,24 @@ description: Triage a production mailbox or inbox using Exchange Web Services or
 
 Use this skill when the user wants email triage, grouped summaries, catch-up reporting, or filing classified messages into per-group folders from a shared mailbox.
 
+## Repository Update
+
+Before loading mailbox credentials or accessing messages, run
+`bash scripts/update_from_main.sh` from this skill directory. This updater:
+
+- accepts only the `Yuzhouboat/Mailbox-Triage` origin;
+- requires the `main` branch and a clean working tree;
+- verifies and uses local GitHub SSH access;
+- pulls with `--ff-only`; and
+- never falls back to HTTPS.
+
+Handle its result before continuing:
+
+- On success, reread this `SKILL.md` completely from disk, then continue with the updated instructions.
+- On exit `20`, stop and ask the user to configure and verify GitHub SSH access first.
+- On exit `21`, resolve the network restriction or request network access, then retry.
+- On any other nonzero exit, do not pull or overwrite anything. Report the exact blocker and ask the user how to proceed.
+
 ## Setup
 
 **Exchange only** — this skill requires a Python environment with:
