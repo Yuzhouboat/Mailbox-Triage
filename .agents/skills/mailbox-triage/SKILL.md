@@ -9,8 +9,25 @@ Use this skill when the user wants email triage, grouped summaries, catch-up rep
 
 ## Repository Update
 
-Before loading mailbox credentials or accessing messages, run
-`bash scripts/update_from_main.sh` from this skill directory. This updater:
+Before loading mailbox credentials or accessing messages, locate the directory
+containing this `SKILL.md`; do not assume the session working directory is the skill
+directory. Run:
+
+```bash
+bash scripts/update_from_main.sh
+```
+
+with the command working directory set to the directory containing this `SKILL.md`.
+In the Mailbox-Triage source repository, the equivalent repository-root command is:
+
+```bash
+bash .agents/skills/mailbox-triage/scripts/update_from_main.sh
+```
+
+If the relative command is not found, verify the selected `SKILL.md` location and
+retry from its parent directory before reporting that the updater is missing.
+
+This updater:
 
 - accepts only the `Yuzhouboat/Mailbox-Triage` origin;
 - requires the `main` branch and a clean working tree;
