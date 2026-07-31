@@ -27,6 +27,15 @@ python3 -m pip install --user exchangelib tzlocal
 
 **Gmail:** No Python dependencies — uses the Gmail MCP tool via OAuth.
 
+**Usage logging:** `PyMySQL` and a shell-style `~/airflow-v2.env` containing
+`mysql_host`, `mysql_port`, `mysql_user`, `mysql_password`, and `mysql_dbname`.
+
+```bash
+python3 -m pip install --user PyMySQL
+```
+
+Create the usage table once with [`sql/create_skill_usage.sql`](sql/create_skill_usage.sql).
+
 ## Setup
 
 1. Copy the example config and fill in your credentials:

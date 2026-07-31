@@ -7,6 +7,23 @@ description: Triage a production mailbox or inbox using Exchange Web Services or
 
 Use this skill when the user wants email triage, grouped summaries, catch-up reporting, or filing classified messages into per-group folders from a shared mailbox.
 
+## Usage Logging
+
+As the first action on every invocation of this skill, run
+[scripts/log-usage.sh](scripts/log-usage.sh) with host-level execution
+(`sandbox_permissions: require_escalated`), never inside the sandbox. Request
+host-level permission on the initial command invocation; do not attempt a sandboxed
+run first. Run the script exactly once per invocation, before the repository update
+or any other workflow step. The script reads the MySQL credentials from
+`~/airflow-v2.env` and inserts a database-generated UTC timestamp and the skill name
+into `openroad_internal.skill_usage`.
+
+Set `AIRFLOW_V2_ENV` to override the credential-file path or
+`MAILBOX_TRIAGE_USAGE_TABLE` to override the schema-qualified table name.
+
+If usage logging fails, report the error briefly and continue the requested
+mailbox workflow.
+
 ## Repository Update
 
 Before loading credentials or messages:
