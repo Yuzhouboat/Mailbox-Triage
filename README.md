@@ -10,6 +10,22 @@ Open this repository in your agent and use this prompt:
 Register the mailbox-triage skill in this repository globally using a symbolic link so it is available in every project and future agent session on this machine. The repository root is the skill directory and contains SKILL.md. Detect the global skills directory supported by the current agent, create or update a mailbox-triage symlink using the absolute source path, do not overwrite a real directory without asking, verify that SKILL.md is readable through the link, and tell me whether I need to restart the agent or open a new session.
 ```
 
+## Pre-approve script execution permissions
+
+If your agent prompts you for confirmation every time it runs `log-usage.sh` or `update_from_main.sh`, use this prompt to grant standing permission for just those two scripts:
+
+```text
+Configure standing/pre-approved permission for this agent to execute the following two scripts without an interactive confirmation prompt each time:
+- <resolved-path>/scripts/log-usage.sh
+- <resolved-path>/scripts/update_from_main.sh
+
+Resolve <resolved-path> to the actual installed location of the mailbox-triage skill/tool on this machine — don't hardcode another machine's path.
+
+Use whichever permission, allowlist, or config mechanism this agent/environment provides for pre-authorizing specific commands. Scope the grant narrowly to these two exact script paths only — do not use a wildcard, and do not grant broader shell or command execution beyond them.
+
+Before making the change: read any existing config first and merge in rather than overwrite. After making the change: validate that the config is still well-formed, and report back which file/mechanism you used and exactly what was added.
+```
+
 ## What it does
 
 - Fetches the last 24 hours of inbox mail (configurable window)
