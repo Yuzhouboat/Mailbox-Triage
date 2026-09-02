@@ -6,31 +6,34 @@ For Gmail, see [gmail-authentication.md](gmail-authentication.md).
 
 ## Credential Source
 
-Read mailbox credentials from:
+Read Exchange credentials directly from environment variables — never from a file:
 
-- `~/mailbox-triage/mailbox-triage-config.toml`
+- `MAILBOX_EXCHANGE_SERVER`
+- `MAILBOX_EXCHANGE_USERNAME`
+- `MAILBOX_EXCHANGE_PASSWORD`
 
-The template is:
+There is no file fallback for these. If any is unset, the script fails immediately and names exactly which one is missing.
 
-- [config/mailbox-config.toml.example](../config/mailbox-config.toml.example)
+Non-credential settings still come from an optional local TOML file:
+
+- [config/mailbox-config.toml](../config/mailbox-config.toml) inside this skill directory (gitignored) — edit it directly, there is no separate example/template file
 
 ## Expected Config Fields
 
-Required:
+The config file has no required fields — proceed with defaults if it doesn't exist.
 
-- `server`
-- `username`
-- `password`
-
-Optional:
+Optional (`[exchange]` section):
 
 - `primary_smtp_address`
 - `autodiscover`
+
+Optional (top-level):
+
 - `[group_folders]` (one entry per group whose folder name differs from the group name)
 
 Defaults:
 
-- `primary_smtp_address`: `username`
+- `primary_smtp_address`: `MAILBOX_EXCHANGE_USERNAME`
 - `autodiscover`: `false`
 - group folders: each group is filed into a folder with the same name as the group, unless overridden in `[group_folders]`
 
@@ -38,7 +41,7 @@ Defaults:
 
 Use `exchangelib` with a direct server configuration:
 
-1. Read the config file.
+1. Read `MAILBOX_EXCHANGE_SERVER`, `MAILBOX_EXCHANGE_USERNAME`, `MAILBOX_EXCHANGE_PASSWORD` from the environment; flag immediately by name if any is missing. Read the optional config file for `primary_smtp_address`/`autodiscover` overrides.
 2. Create `Credentials(username, password)`.
 3. Create `Configuration(server=server, credentials=credentials)`.
 4. Create `Account(primary_smtp_address=..., config=config, autodiscover=..., access_type=DELEGATE)`.
@@ -47,6 +50,8 @@ Use `exchangelib` with a direct server configuration:
 The bundled helper script already implements this pattern:
 
 - [scripts/triage_exchange_mailbox.py](../scripts/triage_exchange_mailbox.py)
+
+The helper scripts are self-contained `uv` scripts (PEP 723 inline metadata declares `exchangelib`/`tzlocal`) — invoke them with `uv run scripts/<name>.py`, never `python3 scripts/<name>.py`. `uv` resolves and installs dependencies into an ephemeral environment automatically; there is no separate `pip install` step. If the `uv` binary is not found on the system (`command -v uv`), stop before attempting any Exchange script and report that `uv` is required and missing.
 
 ## Failure Handling
 

@@ -1,9 +1,22 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "exchangelib",
+#     "tzlocal",
+# ]
+# ///
 """Save the triage summary report as a draft in Exchange Drafts folder."""
 import argparse
 import sys
 
-from mailbox_common import build_account, config_section, read_simple_toml, require_fields, resolve_config_path
+from mailbox_common import (
+    build_account,
+    config_section,
+    read_simple_toml,
+    require_exchange_env_credentials,
+    resolve_config_path,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,9 +30,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     config_path = resolve_config_path(args.config)
-    raw_config = read_simple_toml(config_path)
-    config = config_section(raw_config, "exchange") or raw_config
-    require_fields(config, ["server", "username", "password"])
+    raw_config = read_simple_toml(config_path) if config_path else {}
+    config = config_section(raw_config, "exchange")
+    config = {**config, **require_exchange_env_credentials()}
 
     body = args.body if args.body is not None else sys.stdin.read()
     account = build_account(config)

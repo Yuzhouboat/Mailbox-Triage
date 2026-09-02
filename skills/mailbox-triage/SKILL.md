@@ -1,66 +1,20 @@
 ---
 name: mailbox-triage
-description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, with custom business-group rules. Use for requests to review recent email, summarize mail by topic, classify mailbox messages into defined heading groups or an Uncategorized fallback, inspect attachments containing error details, produce consolidated catch-up summaries, or file messages into per-group folders or Gmail labels after triage.
+description: Triage a production mailbox or inbox using Exchange Web Services or Gmail, classifying messages by business-group rules, summarizing by topic, and filing them into per-group folders or labels.
+disable-model-invocation: true
 ---
 
 # Mailbox Triage
 
 Use this skill when the user wants email triage, grouped summaries, catch-up reporting, or filing classified messages into per-group folders from a shared mailbox.
 
-## Usage Logging
-
-As the first action on every invocation of this skill, run
-[scripts/log-usage.sh](scripts/log-usage.sh) with host-level execution
-(`sandbox_permissions: require_escalated`), never inside the sandbox. Request
-host-level permission on the initial command invocation; do not attempt a sandboxed
-run first. Run the script exactly once per invocation, before the repository update
-or any other workflow step. The script reads the MySQL credentials from
-`~/airflow-v2.env` and inserts a database-generated UTC timestamp and the skill name
-into `openroad_internal.skill_usage`.
-
-Set `AIRFLOW_V2_ENV` to override the credential-file path or
-`MAILBOX_TRIAGE_USAGE_TABLE` to override the schema-qualified table name.
-
-If usage logging fails, report the error briefly and continue the requested
-mailbox workflow.
-
-## Repository Update
-
-Before loading credentials or messages:
-
-1. Run [scripts/update_from_main.sh](scripts/update_from_main.sh). Use host-level execution
-   (`sandbox_permissions: require_escalated`), not the sandbox.
-2. If the script is missing, skip the repository update, notify the user that the
-   skill may be outdated, and continue with the current instructions.
-3. Handle the result:
-   - Success: reread this entire `SKILL.md`, then follow the updated instructions.
-   - Exit `20`: stop and ask the user to configure and verify GitHub SSH access.
-   - Any other nonzero exit: do not overwrite anything. Report the exact blocker,
-     notify the user that the repository update failed because of that error and that
-     the skill content may be outdated, and include the updater's version-lag result.
-     The updater reports one version per commit behind current `main`; when GitHub
-     cannot be reached, it uses cached `origin/main` and labels the result accordingly.
-     If neither comparison is available, report that the version lag is unavailable.
-     Skip the repository update and continue the current workflow using the current
-     instructions.
-
-The updater enforces the expected `Yuzhouboat/Mailbox-Triage` origin, `main`, a clean
-working tree, GitHub SSH, and a fast-forward-only pull. It never uses HTTPS.
-
 ## Setup
 
-**Exchange only** — this skill requires a Python environment with:
+**Exchange only** — the helper scripts are self-contained `uv` scripts (PEP 723 inline metadata declares `exchangelib` and `tzlocal`). Run them with `uv run`, which resolves and installs dependencies into an ephemeral environment on first run — there is no separate install step and no shared virtualenv to manage.
 
-- `exchangelib`
-- `tzlocal`
+This requires the `uv` binary to be present in the environment. **Before running any Exchange script, confirm `uv` is available** (e.g. `command -v uv` or `uv --version`). If it is not found, stop immediately and tell the user `uv` is required and not installed — do not fall back to plain `python3` or attempt to `pip install` the dependencies manually.
 
-Install them with:
-
-```bash
-python3 -m pip install --user exchangelib tzlocal
-```
-
-**Gmail** — no Python dependencies. Gmail access uses the `mcp__claude_ai_Gmail__`* MCP tool directly; no script installation needed.
+**Gmail** — no Python dependencies and no `uv` requirement. Gmail access uses the `mcp__claude_ai_Gmail__`* MCP tool directly; no script installation needed.
 
 ## Inputs
 
@@ -73,36 +27,49 @@ Override the default when the user asks for a different scope:
 - a wider time window (e.g. this week → `--days 7`)
 - read mail included (drop `--unread-only`)
 - custom grouping or escalation rules from the user
-- mailbox credentials stored in a local config file
+- non-credential mailbox settings stored in the local config file (see [Credential Source](#credential-source))
 
 If the user provides custom rules in the thread, those override the bundled defaults.
 
 ## Credential Source
 
-Read mailbox config from `~/mailbox-triage/mailbox-triage-config.toml`.
+**Exchange credentials come only from environment variables** — never from a file:
 
-The config uses TOML sections to declare which backends are available:
+- `MAILBOX_EXCHANGE_SERVER`
+- `MAILBOX_EXCHANGE_USERNAME`
+- `MAILBOX_EXCHANGE_PASSWORD`
 
-- `[exchange]` section — Exchange Web Services. Requires `server`, `username`, `password`.
-- `[gmail]` section — Gmail via MCP. No password stored; authentication is OAuth.
+There is no file fallback. If any of these are unset when an Exchange script runs, it fails immediately and names exactly which variable is missing — report that to the user rather than searching for or asking about a credential file.
 
-Both sections can coexist in the same config file. See [config/mailbox-config.toml.example](config/mailbox-config.toml.example) for the expected fields.
+Non-credential settings (Exchange `primary_smtp_address`/`autodiscover` overrides, Gmail's informational `primary_smtp_address`, and `[group_folders]`) still come from a local TOML file at `config/mailbox-config.toml` inside this skill directory (gitignored). This file is entirely optional — proceed with defaults if it doesn't exist.
+
+`[gmail]` section presence in that file signals Gmail *intent* only — it does not mean Gmail is usable. Gmail is only actually available when the `mcp__claude_ai_Gmail__*` MCP tools are also attached to this agent (see the preflight check in [Workflow](#workflow)). The `MAILBOX_EXCHANGE_*` env vars being fully set signals Exchange is configured. Both backends can validate at once. See [config/mailbox-config.toml](config/mailbox-config.toml) for the expected fields.
 
 See [references/authentication.md](references/authentication.md) for Exchange connection guidance and failure handling.
 See [references/gmail-authentication.md](references/gmail-authentication.md) for Gmail OAuth flow and failure handling.
 
 ## Triage Rules Source
 
-Before classifying messages, read the user-editable rules from `~/mailbox-triage/triage-rules.md`.
-If that file does not exist, fall back to [references/triage-rules.md](references/triage-rules.md) and tell the user the home rules file is missing.
+Before classifying messages, read the user-editable rules from `config/triage-rules.md` inside this skill directory (gitignored, alongside `config/mailbox-config.toml`).
+If that file does not exist, fall back to [references/triage-rules.md](references/triage-rules.md) and tell the user the local rules file is missing.
+
+To set up custom rules, copy [config/triage-rules.md.example](config/triage-rules.md.example) to `config/triage-rules.md` and edit it.
 
 ## Workflow
 
-1. Load the mailbox config. Determine which backend(s) are available:
-  - If only `[exchange]` is present → use Exchange.
-  - If only `[gmail]` is present → use Gmail.
-  - If both `[exchange]` and `[gmail]` are present → ask the user: "Which mailbox would you like to triage — Exchange or Gmail?" and proceed with their choice.
-  - If the user already said "triage my Gmail", "use Gmail", "triage Exchange", etc. in the session, use that choice without asking.
+1. **Preflight validation — run this before any other step, including when the user already named a backend.** Determine which backend(s) are actually usable, not just configured:
+  - **Exchange**: usable only when BOTH of the following hold:
+    1. `MAILBOX_EXCHANGE_SERVER`, `MAILBOX_EXCHANGE_USERNAME`, and `MAILBOX_EXCHANGE_PASSWORD` are all set in the environment. Missing any one of them makes Exchange unavailable — do not look for them in a config file or ask the user to type credentials in chat.
+    2. The `uv` binary is present (e.g. `command -v uv` or `uv --version`). The Exchange helper scripts are self-contained `uv` scripts with no separate install step; without `uv` they cannot run at all. Do not fall back to plain `python3` or a manual `pip install`.
+  - **Gmail**: usable only when BOTH of the following hold:
+    1. The local `config/mailbox-config.toml` file has a `[gmail]` section.
+    2. The `mcp__claude_ai_Gmail__*` MCP tools are actually attached to this agent — confirm this directly (e.g. with `ToolSearch("select:mcp__claude_ai_Gmail__authenticate")` or by checking they're already listed as available tools) rather than assuming from the config file alone.
+  - If only one backend validates → use it.
+  - If both validate → ask the user: "Which mailbox would you like to triage — Exchange or Gmail?" and proceed with their choice.
+  - If neither validates → **stop immediately.** Do not search for alternate credential sources, do not guess, and do not continue to any later workflow step. Tell the user exactly what's missing:
+    - name each unset `MAILBOX_EXCHANGE_*` variable, or state that `uv` is not installed, and
+    - state plainly whether the `[gmail]` section is missing from the config file, the Gmail MCP connector is not attached, or both.
+  - If the user already said "triage my Gmail", "use Gmail", "triage Exchange", etc. earlier in the session, still run the validation above for that specific backend before proceeding — a prior statement of intent does not substitute for validation. If it fails, stop and report exactly what's missing rather than continuing anyway.
 2. **[Exchange]** Run [scripts/triage_exchange_mailbox.py](scripts/triage_exchange_mailbox.py) to connect through Exchange Web Services.
   **[Gmail]** Authenticate via the Gmail MCP tool if not already authenticated this session (see [references/gmail-authentication.md](references/gmail-authentication.md)). Then fetch messages using the Gmail list/search tool. Run two queries and collect all thread IDs before calling get-thread:
 
@@ -134,7 +101,7 @@ If that file does not exist, fall back to [references/triage-rules.md](reference
 
 4. If a message body indicates the real error details are in an attachment, inspect the attachment before final classification. See [Attachment Handling](#attachment-handling).
 5. Classify each message into exactly one group:
-  - Use the group headings defined in `~/mailbox-triage/triage-rules.md`.
+  - Use the group headings defined in `config/triage-rules.md`.
   - If a message fits no defined group, assign it to the default group `Uncategorized`.
   - Every message ends up in exactly one group — a defined group or `Uncategorized`.
 6. Within each group, consolidate and summarize:
@@ -170,7 +137,7 @@ Run helper commands from this `mailbox-triage` skill directory.
 
 ```bash
 # Default scope: all emails (read and unread) from the last 24 hours.
-python3 scripts/triage_exchange_mailbox.py --days 1
+uv run scripts/triage_exchange_mailbox.py --days 1
 ```
 
 Useful flags:
@@ -179,14 +146,14 @@ Useful flags:
 - `--limit N`
 - `--download-attachments`
 - `--attachment-dir /tmp/some-dir`
-- `--config ~/mailbox-triage/mailbox-triage-config.toml`
+- `--config /path/to/mailbox-config.toml` (overrides the default `config/mailbox-config.toml` in this skill directory; Exchange credentials still come only from `MAILBOX_EXCHANGE_*` env vars, never from this file)
 
 The helper returns JSON with normalized message records, attachment metadata, downloaded attachment paths, and durable message identifiers.
 
 Use the move helper only after messages have been classified:
 
 ```bash
-python3 scripts/move_triaged_messages.py \
+uv run scripts/move_triaged_messages.py \
   --messages-json /tmp/triage.json \
   --assignments-json /tmp/group-assignments.json
 ```
@@ -244,7 +211,7 @@ Use this when the message body says the real error details are attached.
 ## Output Format
 
 Default to a concise triage report organized by group. Use one section per group,
-titled with the exact group heading from `~/mailbox-triage/triage-rules.md`, plus an
+titled with the exact group heading from `config/triage-rules.md`, plus an
 `Uncategorized` section for messages that fit no defined group. Omit empty groups.
 
 For each reported item (single message or consolidated cluster), include:

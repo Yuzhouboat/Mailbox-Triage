@@ -1,4 +1,11 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "exchangelib",
+#     "tzlocal",
+# ]
+# ///
 import argparse
 import json
 import sys
@@ -9,7 +16,7 @@ from mailbox_common import (
     build_account,
     config_section,
     read_simple_toml,
-    require_fields,
+    require_exchange_env_credentials,
     resolve_config_path,
 )
 
@@ -310,9 +317,9 @@ def execute_moves(config: Dict[str, Any], moves: List[Dict[str, Any]], folder_ma
 def main() -> int:
     args = parse_args()
     config_path = resolve_config_path(args.config)
-    raw_config = read_simple_toml(config_path)
-    config = config_section(raw_config, "exchange") or raw_config
-    require_fields(config, ["server", "username", "password"])
+    raw_config = read_simple_toml(config_path) if config_path else {}
+    config = config_section(raw_config, "exchange")
+    config = {**config, **require_exchange_env_credentials()}
 
     messages_payload = load_json(Path(args.messages_json))
     assignments_payload = load_json(Path(args.assignments_json))
@@ -326,7 +333,7 @@ def main() -> int:
 
     payload = {
         "mode": "execute" if args.execute else "preview",
-        "config_path": str(config_path),
+        "config_path": str(config_path) if config_path else None,
         "messages_json": str(Path(args.messages_json)),
         "assignments_json": str(Path(args.assignments_json)),
         "folder_map": folder_map,

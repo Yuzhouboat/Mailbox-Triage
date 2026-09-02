@@ -26,15 +26,20 @@ After successful authentication, the real Gmail tools become available automatic
 
 No password is stored. Gmail access uses Google OAuth — credentials are handled by the MCP server.
 
-The config file (`~/mailbox-triage/mailbox-triage-config.toml`) needs only:
+Gmail is considered configured when the local config file (`config/mailbox-config.toml` inside this skill directory) has a `[gmail]` section:
 
 ```toml
-source = "gmail"
+[gmail]
 ```
 
-Optionally set `primary_smtp_address` for display purposes (informational only — not used for authentication).
+Optionally set `primary_smtp_address` inside that section for display purposes (informational only — not used for authentication).
+
+A `[gmail]` section alone is not sufficient — Gmail is only usable when the `mcp__claude_ai_Gmail__*` MCP tools are also attached to this agent. Verify tool availability (e.g. `ToolSearch("select:mcp__claude_ai_Gmail__authenticate")`, or check whether the tools are already listed as available) before starting the OAuth flow below. If the tools are not available, stop and report that the Gmail connector is not attached — do not attempt `authenticate` or any other Gmail tool call.
 
 ## Failure Handling
+
+**Gmail MCP connector not attached**
+- The `mcp__claude_ai_Gmail__*` tools are not available to this agent, regardless of what the config file says. Report this plainly and stop — do not attempt `authenticate` or any other Gmail tool call, and do not fall back to browser or direct API access.
 
 **Auth error or OAuth callback rejected**
 - Report the error and retry the auth flow from step 1.

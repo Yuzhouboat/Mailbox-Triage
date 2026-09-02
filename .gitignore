@@ -10,9 +10,12 @@ __pycache__/
 *.py[cod]
 *.pyo
 
-# Local config with secrets (keep the .example template tracked)
-.agents/skills/mailbox-triage/config/mailbox-config.toml
+# Local, per-checkout config — no example/template file, create these directly
+skills/mailbox-triage/config/mailbox-config.toml
 mailbox-config.toml
+
+# Local, per-checkout triage rules (keep the bundled reference copy tracked)
+skills/mailbox-triage/config/triage-rules.md
 
 # Editor / OS noise
 *.swp

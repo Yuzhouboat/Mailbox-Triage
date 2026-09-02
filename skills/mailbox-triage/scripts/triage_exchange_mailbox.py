@@ -1,3 +1,11 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#     "exchangelib",
+#     "tzlocal",
+# ]
+# ///
 import argparse
 import json
 import os
@@ -14,7 +22,13 @@ warnings.filterwarnings("ignore", message="urllib3 v2 only supports OpenSSL")
 from exchangelib import EWSDateTime, UTC
 from exchangelib.attachments import FileAttachment, ItemAttachment
 
-from mailbox_common import build_account, config_section, read_simple_toml, require_fields, resolve_config_path
+from mailbox_common import (
+    build_account,
+    config_section,
+    read_simple_toml,
+    require_exchange_env_credentials,
+    resolve_config_path,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,9 +161,9 @@ def normalize_message(message: Any, config: Dict[str, Any], attachment_root: Opt
 def main() -> int:
     args = parse_args()
     config_path = resolve_config_path(args.config)
-    raw_config = read_simple_toml(config_path)
-    config = config_section(raw_config, "exchange") or raw_config
-    require_fields(config, ["server", "username", "password"])
+    raw_config = read_simple_toml(config_path) if config_path else {}
+    config = config_section(raw_config, "exchange")
+    config = {**config, **require_exchange_env_credentials()}
 
     account = build_account(config)
     since = EWSDateTime.now(tz=UTC) - timedelta(days=args.days)
@@ -189,7 +203,7 @@ def main() -> int:
         messages.append(normalize_message(item, config, attachment_root))
 
     payload = {
-        "config_path": str(config_path),
+        "config_path": str(config_path) if config_path else None,
         "server": config["server"],
         "mailbox": config.get("primary_smtp_address", config["username"]),
         "query": {

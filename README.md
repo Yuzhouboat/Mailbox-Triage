@@ -7,23 +7,7 @@ An AI agent workflow for triaging your email inbox — Exchange or Gmail — wit
 Open this repository in your agent and use this prompt:
 
 ```text
-Register the mailbox-triage skill in this repository globally using a symbolic link so it is available in every project and future agent session on this machine. The repository root is the skill directory and contains SKILL.md. Detect the global skills directory supported by the current agent, create or update a mailbox-triage symlink using the absolute source path, do not overwrite a real directory without asking, verify that SKILL.md is readable through the link, and tell me whether I need to restart the agent or open a new session.
-```
-
-## Pre-approve script execution permissions
-
-If your agent prompts you for confirmation every time it runs `log-usage.sh` or `update_from_main.sh`, use this prompt to grant standing permission for just those two scripts:
-
-```text
-Configure standing/pre-approved permission for this agent to execute the following two scripts without an interactive confirmation prompt each time:
-- <resolved-path>/scripts/log-usage.sh
-- <resolved-path>/scripts/update_from_main.sh
-
-Resolve <resolved-path> to the actual installed location of the mailbox-triage skill/tool on this machine — don't hardcode another machine's path.
-
-Use whichever permission, allowlist, or config mechanism this agent/environment provides for pre-authorizing specific commands. Scope the grant narrowly to these two exact script paths only — do not use a wildcard, and do not grant broader shell or command execution beyond them.
-
-Before making the change: read any existing config first and merge in rather than overwrite. After making the change: validate that the config is still well-formed, and report back which file/mechanism you used and exactly what was added.
+Register the mailbox-triage skill in this repository globally using a symbolic link so it is available in every project and future agent session on this machine. The skill directory is `skills/mailbox-triage/` inside this repository and contains SKILL.md. Detect the global skills directory supported by the current agent, create or update a mailbox-triage symlink pointing at the absolute path of skills/mailbox-triage/ (not the repository root), do not overwrite a real directory without asking, verify that SKILL.md is readable through the link, and tell me whether I need to restart the agent or open a new session.
 ```
 
 ## What it does
@@ -36,40 +20,29 @@ Before making the change: read any existing config first and merge in rather tha
 
 ## Prerequisites
 
-**Exchange:**
-```bash
-python3 -m pip install --user exchangelib tzlocal
-```
+**Exchange:** requires [`uv`](https://docs.astral.sh/uv/) on PATH. The helper scripts are self-contained `uv` scripts (PEP 723 inline metadata) — `uv run scripts/<name>.py` installs `exchangelib`/`tzlocal` into an ephemeral environment automatically on first run. No separate `pip install` step. If `uv` isn't installed, the skill stops before running anything and says so.
 
-**Gmail:** No Python dependencies — uses the Gmail MCP tool via OAuth.
-
-**Usage logging:** `PyMySQL` and a shell-style `~/airflow-v2.env` containing
-`mysql_host`, `mysql_port`, `mysql_user`, `mysql_password`, and `mysql_dbname`.
-
-```bash
-python3 -m pip install --user PyMySQL
-```
-
-Create the usage table once with [`sql/create_skill_usage.sql`](sql/create_skill_usage.sql).
+**Gmail:** No Python dependencies, no `uv` requirement. Uses the Gmail MCP tools (`mcp__claude_ai_Gmail__*`) via OAuth — these come from the **Gmail connector on your Anthropic account** (claude.ai → Settings → Connectors), not from anything in this repo. Enable that connector once on your account; it isn't project-specific and can't be configured via a project `.mcp.json`. The skill checks that the connector's tools are actually attached before use, not just that Gmail is configured in a local file.
 
 ## Setup
 
-1. Copy the example config and fill in your credentials:
+1. **Exchange only** — set your credentials as environment variables (never stored in a file):
    ```bash
-   mkdir -p ~/mailbox-triage
-   cp .agents/skills/mailbox-triage/config/mailbox-config.toml.example ~/mailbox-triage/mailbox-triage-config.toml
+   export MAILBOX_EXCHANGE_SERVER="exchange.example.com"
+   export MAILBOX_EXCHANGE_USERNAME="mailbox@example.com"
+   export MAILBOX_EXCHANGE_PASSWORD="..."
    ```
-   Edit `~/mailbox-triage/mailbox-triage-config.toml` and set your `server`, `username`, and `password` (Exchange) or leave the `[gmail]` section as-is for OAuth.
+   If any of these are unset when you run the skill, it stops and names exactly which one is missing.
 
-2. (Optional) Customize triage rules:
+2. (Optional) Create `skills/mailbox-triage/config/mailbox-config.toml` (gitignored — there's no example/template, just create it directly) for non-credential settings: `primary_smtp_address`/`autodiscover` overrides, a `[gmail]` section for OAuth, or `[group_folders]` overrides. See the field list under Configuration below. This file is entirely optional — the skill works with just the env vars above if you don't need any of these overrides.
+
+3. (Optional) Customize triage rules:
    ```bash
-   cp .agents/skills/mailbox-triage/references/triage-rules.md ~/mailbox-triage/triage-rules.md
+   cp skills/mailbox-triage/config/triage-rules.md.example skills/mailbox-triage/config/triage-rules.md
    ```
-   Edit `~/mailbox-triage/triage-rules.md` to adjust group definitions and priority criteria.
+   Edit `skills/mailbox-triage/config/triage-rules.md` (gitignored) to adjust group definitions and priority criteria.
 
-3. Open the repository as your project. Compatible agents discover the skill automatically from `.agents/skills/mailbox-triage/SKILL.md`.
-
-   You can also invoke it explicitly:
+4. Open the repository as your project. The skill is user-invoked only — it does not fire automatically, so ask for it explicitly:
 
    ```text
    Use $mailbox-triage to triage my inbox.
@@ -95,10 +68,12 @@ The agent will fetch, classify, file, and summarize your inbox automatically. Th
 
 ## Configuration
 
-See [`.agents/skills/mailbox-triage/config/mailbox-config.toml.example`](.agents/skills/mailbox-triage/config/mailbox-config.toml.example) for all available options, including:
+Exchange credentials (`MAILBOX_EXCHANGE_SERVER`, `MAILBOX_EXCHANGE_USERNAME`, `MAILBOX_EXCHANGE_PASSWORD`) are environment variables only — see Setup above.
 
-- `[exchange]` — server, username, password, optional shared mailbox address
-- `[gmail]` — OAuth only, no password stored
+Create `skills/mailbox-triage/config/mailbox-config.toml` (gitignored, no example/template) for the optional non-credential settings, including:
+
+- `[exchange]` — optional shared mailbox address, autodiscover
+- `[gmail]` — OAuth only, no password stored (requires the Gmail connector enabled on your Anthropic account — see Prerequisites)
 - `[group_folders]` — override folder/label names per triage group
 
 ## License
