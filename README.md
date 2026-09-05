@@ -13,6 +13,13 @@ Part of the [yuzhou-agent-toolkit](https://github.com/Yuzhouboat/yuzhou-agent-to
 /plugin install mailbox-triage
 ```
 
+**Codex, via the same marketplace:**
+
+```bash
+codex plugin marketplace add git@github.com:Yuzhouboat/yuzhou-agent-toolkit.git
+codex plugin add mailbox-triage@yuzhou-agent-toolkit
+```
+
 **Any agent, via a global symlink:** see "Register the skill globally" below.
 
 ## Register the skill globally
