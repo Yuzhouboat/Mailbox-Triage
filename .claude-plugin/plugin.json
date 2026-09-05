@@ -1,0 +1,13 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "mailbox-triage",
+  "version": "0.1.0",
+  "description": "AI agent workflow for triaging an email inbox (Exchange or Gmail) with automated classification, filing, and session draft reports.",
+  "author": {
+    "name": "Yuzhou",
+    "email": "yuzhouboat@gmail.com"
+  },
+  "skills": [
+    "./skills"
+  ]
+}

@@ -2,6 +2,19 @@
 
 An AI agent workflow for triaging your email inbox — Exchange or Gmail — with automated classification, filing, and session draft reports. Works with any AI coding agent that can read context files and run shell commands, including Claude Code, OpenAI Codex, Cursor, and others.
 
+Part of the [yuzhou-agent-toolkit](https://github.com/Yuzhouboat/yuzhou-agent-toolkit) plugin marketplace.
+
+## Install
+
+**Claude Code, via the marketplace:**
+
+```
+/plugin marketplace add Yuzhouboat/yuzhou-agent-toolkit
+/plugin install mailbox-triage
+```
+
+**Any agent, via a global symlink:** see "Register the skill globally" below.
+
 ## Register the skill globally
 
 Open this repository in your agent and use this prompt:
