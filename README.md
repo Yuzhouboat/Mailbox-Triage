@@ -10,7 +10,8 @@ Part of the [yuzhou-agent-toolkit](https://github.com/Yuzhouboat/yuzhou-agent-to
 
 ```
 /plugin marketplace add Yuzhouboat/yuzhou-agent-toolkit
-/plugin install mailbox-triage
+/plugin install mailbox-triage -s user       # every project on this machine (default)
+/plugin install mailbox-triage -s project    # this repo only, via .claude/settings.json
 ```
 
 **Codex, via the same marketplace:**
@@ -19,6 +20,12 @@ Part of the [yuzhou-agent-toolkit](https://github.com/Yuzhouboat/yuzhou-agent-to
 codex plugin marketplace add git@github.com:Yuzhouboat/yuzhou-agent-toolkit.git
 codex plugin add mailbox-triage@yuzhou-agent-toolkit
 ```
+
+Codex has no project-scope install — `codex plugin add` always installs machine-wide, unlike
+Claude Code's `-s user|project`. Both install paths above were verified with a real install
+(`claude plugin install` / `codex plugin add`); see the
+[yuzhou-agent-toolkit README](https://github.com/Yuzhouboat/yuzhou-agent-toolkit#claude-code-plugin-marketplace)
+for the full verification notes.
 
 **Any agent, via a global symlink:** see "Register the skill globally" below.
 
