@@ -102,12 +102,25 @@ sleep "$BOOT_WAIT"
 
 tmux send-keys -t "$NEW_SESSION" "$PROMPT" Enter
 
-# A PROMPT starting with "/" opens claude's slash-command autocomplete
-# dropdown as it's typed; the first Enter gets consumed by the dropdown
-# instead of submitting, leaving the text sitting unsubmitted in the
-# input box. A second Enter actually submits it. Harmless no-op for a
-# plain-text PROMPT (Enter on an already-submitted/empty input box).
-sleep 1
-tmux send-keys -t "$NEW_SESSION" Enter
+# One Enter is often not enough to actually submit: a PROMPT starting with
+# "/" opens claude's slash-command autocomplete dropdown, which eats the
+# first Enter instead of submitting, and remote-control's first-run
+# screens can eat a second one too — leaving $PROMPT sitting unsubmitted
+# in the input box indefinitely. Keep resending Enter until the footer
+# shows "esc to interrupt" (only appears once a turn is actually running),
+# or give up after a few tries and log it so a stuck session is visible.
+submitted=0
+for attempt in 1 2 3 4 5 6; do
+    sleep 1
+    if tmux capture-pane -t "$NEW_SESSION" -p 2>/dev/null | grep -q "esc to interrupt"; then
+        submitted=1
+        break
+    fi
+    tmux send-keys -t "$NEW_SESSION" Enter
+done
 
-log "started tmux session '$NEW_SESSION' (remote-control name '$REMOTE_PREFIX') with prompt: $PROMPT"
+if [ "$submitted" = 1 ]; then
+    log "started tmux session '$NEW_SESSION' (remote-control name '$REMOTE_PREFIX') with prompt: $PROMPT"
+else
+    log "WARNING: '$NEW_SESSION' still not showing signs of a running turn after $attempt attempts — prompt may be stuck unsubmitted: $PROMPT"
+fi
