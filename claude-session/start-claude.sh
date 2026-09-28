@@ -3,7 +3,8 @@
 # `claude` session inside it, then types a starting prompt into it. Before
 # doing that, sweeps existing sessions for this project and kills any that
 # have been idle (no pane output) for IDLE_MINUTES or more — active ones
-# are left running untouched, so several can coexist.
+# are left running untouched, so several can coexist. If one of them is
+# still in the middle of a turn, this run is skipped instead.
 #
 # The tmux session name and the Remote Control session name are DIFFERENT
 # strings, deliberately:
@@ -18,6 +19,9 @@
 #
 # Meant to be called from cron; set up via ./setup.sh. See README.md in
 # this folder for full instructions.
+#
+# Synced from https://github.com/Yuzhouboat/claude-session — edit it there
+# and run its sync.sh, not in a project's copy.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -81,6 +85,36 @@ while IFS= read -r s; do
             ;;
     esac
 done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+
+# --- Skip this run if a previous one is still working -----------------------
+# Two runs of the same prompt at once (e.g. two /issue-fixer passes) can
+# pick up the same work. "Busy" = claude's footer shows "esc to interrupt",
+# which only appears while a turn is running — a session that finished and
+# is just sitting at the input box doesn't block a new run.
+while IFS= read -r s; do
+    case "$s" in
+        "${TMUX_BASE}-"*)
+            if tmux capture-pane -t "$s" -p 2>/dev/null | grep -q "esc to interrupt"; then
+                log "skipped: previous session '$s' is still running a turn"
+                exit 0
+            fi
+            ;;
+    esac
+done < <(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+
+# --- Refuse to launch into the trust dialog ---------------------------------
+# An untrusted directory (e.g. the project was moved) makes claude show
+# "Do you trust this folder?" with "No, exit" preselected; the Enter below
+# picks it and the run dies silently. Log it loudly instead. Skipped if jq
+# is unavailable.
+CLAUDE_JSON="$HOME/.claude.json"
+if command -v jq >/dev/null 2>&1 && [ -f "$CLAUDE_JSON" ]; then
+    trusted="$(jq --arg p "$PROJECT_DIR" '.projects[$p].hasTrustDialogAccepted // false' "$CLAUDE_JSON" 2>/dev/null || echo unknown)"
+    if [ "$trusted" = "false" ]; then
+        log "ERROR: Claude Code does not trust '$PROJECT_DIR' (folder moved?) — not launching. Run ./setup.sh here, or open claude in this folder once and choose \"Yes, I trust this folder\"."
+        exit 1
+    fi
+fi
 
 # --- Always start a new timestamped session ---------------------------------
 TIMESTAMP="$(date +%H%M-%m%d%Y)"

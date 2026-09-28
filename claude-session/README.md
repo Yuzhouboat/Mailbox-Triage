@@ -2,7 +2,14 @@
 
 Runs `claude` in a detached tmux session on a cron schedule, so it's live
 and waiting whenever you attach (locally or over SSH). This whole folder is
-self-contained and portable: copy it into any project to set it up there.
+self-contained: clone the project, run `./setup.sh`, done.
+
+> **These files are synced from
+> [Yuzhouboat/claude-session](https://github.com/Yuzhouboat/claude-session).**
+> Edit them there and run its `sync.sh` — changes made directly in a
+> project's copy get overwritten on the next sync. The only project-owned
+> files here are `claude-schedule.conf` and `claude-tmux.log`.
+> Installed version: see `VERSION`.
 
 ## Files
 
@@ -24,10 +31,13 @@ self-contained and portable: copy it into any project to set it up there.
   Every run: sweeps existing `$TMUX_BASE-*` tmux sessions and kills any
   that have been silent (no pane output) for `IDLE_MINUTES` or longer —
   a session still actively producing output is left running untouched,
-  no matter how long it's been up — then **always** starts a brand-new
-  tmux session named `$TMUX_BASE-<timestamp>` (`HHMM-mmddyyyy`, so
-  several can coexist if more than one is busy at once), waits for the
-  TUI to boot, and types a starting prompt into it. Always launches
+  no matter how long it's been up. If any remaining `$TMUX_BASE-*`
+  session is still in the middle of a turn (its footer shows
+  `esc to interrupt`), this run is **skipped** so two runs never work on
+  the same thing at once. Otherwise it starts a brand-new tmux session
+  named `$TMUX_BASE-<timestamp>` (`HHMM-mmddyyyy`; a finished session
+  waiting at the input box doesn't block this), waits for the TUI to
+  boot, and types a starting prompt into it. Always launches
   `claude --remote-control --remote-control-session-name-prefix
   "$HOST-$SESSION-<timestamp>"`.
 - `claude-schedule.conf` — this project's settings: `SESSION` (just the
@@ -40,13 +50,19 @@ self-contained and portable: copy it into any project to set it up there.
   `CRON_SCHEDULE`, which only `setup.sh` reads/writes — it just
   remembers what schedule *should* be installed). Hand-editable, but
   `setup.sh` is usually easier.
-- `setup.sh` — checks tmux/claude are installed, walks through each config
+- `setup.sh` — checks tmux/claude/jq are installed, walks through each config
   setting one at a time (Enter keeps the current value), then
-  installs/updates/removes the crontab entry to match. Safe to re-run any
-  time. Run as `./setup.sh remove` to skip the wizard and just tear
+  installs/updates/removes the crontab entry to match, and offers to mark
+  the project folder as trusted in Claude Code (see "Workspace trust"
+  below). Safe to re-run any time. Run as `./setup.sh remove` to skip the wizard and just tear
   everything down (see "Quick remove" below).
 - `claude-tmux.log` — created automatically; one line per run
-  (started / skipped).
+  (started / killed idle / `skipped: ... still running a turn` /
+  `ERROR: ... does not trust ...`). Git-ignored (via `.gitignore` in this
+  folder) — it holds your hostname and prompts and changes every hour.
+- `claude-schedule.conf.example` — starting point `setup.sh` copies to
+  `claude-schedule.conf` the first time it runs in a project.
+- `VERSION` — which `claude-session` release this copy is.
 
 ## Setting it up
 
@@ -88,10 +104,34 @@ It walks through, in order:
    - Type a new crontab schedule (e.g. `0 9 * * *`) to set/change it.
    - Type `none` to clear it (you'll then be asked whether to also remove
      the crontab line, if one exists).
+6. **Workspace trust** — if Claude Code doesn't trust this project folder
+   yet, asks `Mark it as trusted in ~/.claude.json? [y/N]`. Skipped
+   silently if it's already trusted.
 
 Every answer gets written back to `claude-schedule.conf` immediately, then
 `setup.sh` adds, replaces, or removes the crontab entry for `start-claude.sh`
 to match — it never touches unrelated crontab lines.
+
+## Workspace trust
+
+The first time `claude` opens a folder it asks "Do you trust this folder?",
+with **No, exit** preselected. Trust is remembered per exact path in
+`~/.claude.json` (`projects["<path>"].hasTrustDialogAccepted`) — trusting a
+parent folder does not cover its subfolders. Under cron nobody answers that
+dialog: `start-claude.sh`'s Enter lands on "No, exit" and the run dies.
+
+So:
+- `setup.sh` offers to set that flag for this project (the same thing the
+  dialog's "Yes" does). Answer `y` once and cron runs never see the dialog.
+- `start-claude.sh` checks the flag before launching. If the folder isn't
+  trusted it logs `ERROR: Claude Code does not trust '<path>' ...` to
+  `claude-tmux.log` and exits without starting a session.
+
+**Moved or renamed the project?** The path changed, so both the crontab
+line and the trust flag are stale. Re-run `./setup.sh` in the new location
+— it updates the crontab entry and offers to trust the new path. (Or open
+`claude` in the folder once and choose "Yes, I trust this folder", then fix
+the crontab line.)
 
 Common cron schedules:
 ```
@@ -114,10 +154,23 @@ so running `./setup.sh` again later brings it back with the same settings.
 
 ## Using it in another project
 
-Copy this whole `claude-session/` folder into the other project, then run
-`./setup.sh` from inside it — no arguments needed. It'll pick up the new
-project's folder name automatically for the auto session default and walk
-you through the rest.
+From a clone of the `claude-session` repo:
+```bash
+./sync.sh /path/to/other-project   # copies the scripts into other-project/claude-session/
+cd /path/to/other-project/claude-session && ./setup.sh
+```
+Then commit `claude-session/` (including your `claude-schedule.conf`) in
+that project. `setup.sh` creates `claude-schedule.conf` from the example,
+picks up the project's folder name for the auto session default, and walks
+you through the rest, including trusting the new folder.
+
+## Updating the scripts
+
+Edit in the `claude-session` repo, bump `VERSION`, commit, then run
+`./sync.sh` there. It copies the synced files into every project listed in
+`sync-targets.local` (or the paths you pass it), never touches
+`claude-schedule.conf`, and prints each project's `git diff` — review and
+commit in each project yourself.
 
 ## Using it day to day
 
@@ -182,9 +235,9 @@ tmux kill-server                      # kill tmux entirely (all sessions)
 Or from inside the session: exit `claude` normally, then `exit` the shell —
 tmux closes the pane/session once nothing is left running in it.
 
-**Several piling up is expected** now — every cron run starts a new
-`$TMUX_BASE-<timestamp>`, and only idle ones (past `IDLE_MINUTES`) get
-swept on the *next* run. If several are genuinely stuck/unwanted before that:
+**A few can coexist** — a cron run starts a new `$TMUX_BASE-<timestamp>`
+whenever no existing one is mid-turn, and finished ones only get swept once
+idle past `IDLE_MINUTES` on a *later* run. If several are genuinely stuck/unwanted before that:
 ```bash
 tmux ls | grep '^home-yuzhou-Projects-orim-data-airflow-dags-'   # see what's there
 tmux kill-session -t <name>                             # clean up the ones you don't need

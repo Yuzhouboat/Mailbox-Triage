@@ -5,8 +5,9 @@
 # (which lives right next to this script). Safe to re-run any time.
 # See README.md in this folder for full instructions.
 #
-# To use this in another project: copy this whole claude-session/ folder
-# into that project, then run ./setup.sh inside it.
+# These scripts are synced from https://github.com/Yuzhouboat/claude-session
+# — edit them there and run its sync.sh, not in a project's copy. Only
+# claude-schedule.conf (and the log) belong to the project.
 set -euo pipefail
 
 SESSION_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -80,27 +81,40 @@ if [ "${1:-}" = "remove" ] || [ "${1:-}" = "--remove" ]; then
 fi
 
 echo "Setting up scheduled Claude for: $PROJECT_DIR"
+echo "claude-session version: $(cat "$SESSION_DIR/VERSION" 2>/dev/null || echo unknown)"
 echo
 
 # --- Sanity check: the pieces should already be here -----------------------
-for f in "$SCRIPT_PATH" "$CONFIG_FILE"; do
-    if [ ! -f "$f" ]; then
-        echo "Missing: $f"
-        echo "setup.sh expects start-claude.sh and claude-schedule.conf to"
-        echo "already sit next to it in claude-session/."
-        exit 1
+if [ ! -f "$SCRIPT_PATH" ]; then
+    echo "Missing: $SCRIPT_PATH"
+    echo "setup.sh expects start-claude.sh to sit next to it in claude-session/."
+    exit 1
+fi
+# First setup in a project: start from the example (the wizard below
+# rewrites it with this project's answers anyway).
+if [ ! -f "$CONFIG_FILE" ]; then
+    if [ -f "$CONFIG_FILE.example" ]; then
+        cp "$CONFIG_FILE.example" "$CONFIG_FILE"
+    else
+        : > "$CONFIG_FILE"
     fi
-done
+    echo "Created $CONFIG_FILE for this project."
+    echo
+fi
 chmod +x "$SCRIPT_PATH"
 
 # --- Dependency check --------------------------------------------------
 missing=()
 command -v tmux >/dev/null 2>&1 || missing+=(tmux)
 command -v claude >/dev/null 2>&1 || missing+=(claude)
+command -v jq >/dev/null 2>&1 || missing+=(jq)
 if [ "${#missing[@]}" -gt 0 ]; then
     echo "Missing on this machine: ${missing[*]}"
     if [[ " ${missing[*]} " == *" tmux "* ]]; then
         echo "  Install tmux:   sudo apt-get update && sudo apt-get install -y tmux"
+    fi
+    if [[ " ${missing[*]} " == *" jq "* ]]; then
+        echo "  Install jq:     sudo apt-get update && sudo apt-get install -y jq"
     fi
     if [[ " ${missing[*]} " == *" claude "* ]]; then
         echo "  Install claude: https://docs.claude.com/claude-code"
@@ -291,6 +305,39 @@ elif [ -n "$existing" ]; then
         fi
     else
         echo "(claude-schedule.conf has no CRON_SCHEDULE set, but this crontab line runs anyway.)"
+    fi
+fi
+
+# --- Workspace trust ---------------------------------------------------------
+# Claude Code shows a "Do you trust this folder?" dialog the first time it
+# opens a directory, keyed by exact path in ~/.claude.json. Under cron,
+# start-claude.sh's Enter lands on the default "No, exit", so an untrusted
+# (e.g. newly moved) project silently never runs. Record trust here, once,
+# with your explicit OK — the same flag the dialog's "Yes" writes.
+CLAUDE_JSON="$HOME/.claude.json"
+echo
+if ! command -v jq >/dev/null 2>&1; then
+    echo "jq not installed — skipping workspace trust. Open claude in $PROJECT_DIR"
+    echo "once and choose \"Yes, I trust this folder\" before cron runs it."
+elif [ -f "$CLAUDE_JSON" ] && [ "$(jq --arg p "$PROJECT_DIR" '.projects[$p].hasTrustDialogAccepted // false' "$CLAUDE_JSON")" = "true" ]; then
+    echo "Claude Code already trusts $PROJECT_DIR."
+else
+    echo "Claude Code has not trusted $PROJECT_DIR yet; the cron-launched"
+    echo "session would stop at the trust dialog and exit."
+    read -rp "Mark it as trusted in $CLAUDE_JSON? [y/N] " ans
+    if [[ "$ans" =~ ^[Yy]$ ]]; then
+        [ -f "$CLAUDE_JSON" ] || echo '{}' > "$CLAUDE_JSON"
+        tmp="$(mktemp "$CLAUDE_JSON.XXXXXX")"
+        if jq --arg p "$PROJECT_DIR" '.projects[$p].hasTrustDialogAccepted = true' "$CLAUDE_JSON" > "$tmp"; then
+            chmod 600 "$tmp"
+            mv "$tmp" "$CLAUDE_JSON"
+            echo "Trusted."
+        else
+            rm -f "$tmp"
+            echo "Failed to update $CLAUDE_JSON — open claude in $PROJECT_DIR once and trust it by hand."
+        fi
+    else
+        echo "Skipped. start-claude.sh will log an error and not launch until it's trusted."
     fi
 fi
 
