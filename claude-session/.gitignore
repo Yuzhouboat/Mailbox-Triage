@@ -1,6 +1,5 @@
-# Synced into each project's claude-session/ folder.
+# Fetched by setup.sh from https://github.com/Yuzhouboat/claude-session
+.upstream/
+
 # Per-run log: hostname, session names, prompts — changes every hour.
 claude-tmux.log
-
-# Upstream repo only: this machine's list of projects for sync.sh.
-sync-targets.local
