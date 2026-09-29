@@ -34,7 +34,7 @@ from mailbox_common import (
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Fetch and normalize mailbox messages via Exchange Web Services.")
     parser.add_argument("--config", help="Path to mailbox config TOML file")
-    parser.add_argument("--days", type=int, default=7, help="Look back this many days from now")
+    parser.add_argument("--days", type=int, default=1, help="Look back this many days from now")
     parser.add_argument("--unread-only", action="store_true", help="Only return unread messages")
     parser.add_argument("--limit", type=int, default=500, help="Maximum number of messages to return")
     parser.add_argument("--download-attachments", action="store_true", help="Download file attachments to disk")

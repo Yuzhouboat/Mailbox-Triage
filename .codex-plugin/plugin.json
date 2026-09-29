@@ -1,7 +1,7 @@
 {
   "name": "mailbox-triage",
-  "version": "0.1.0",
-  "description": "Triages an email inbox (Exchange or Gmail) with automated classification, filing, and session draft reports.",
+  "version": "0.2.0",
+  "description": "Triages an Exchange and/or Gmail inbox: classifies recent mail into priority groups, files it, and saves a draft report.",
   "author": {
     "name": "Yuzhou",
     "url": "https://github.com/Yuzhouboat"
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Mailbox Triage",
     "shortDescription": "Triage an inbox: classify, file, and summarize.",
-    "longDescription": "Fetches recent inbox mail, classifies it into priority groups, files each message into the right Exchange folder or Gmail label, and saves a triage summary as a draft.",
+    "longDescription": "Fetches recent inbox mail from Exchange, Gmail, or both, classifies it into priority groups, files each message into the right Exchange folder or Gmail label, and saves a triage summary as a draft. Runs unattended; never sends, forwards, or deletes mail.",
     "developerName": "Yuzhou",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
