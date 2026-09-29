@@ -41,7 +41,7 @@ Register the mailbox-triage skill in this repository globally using a symbolic l
 
 - Fetches recent inbox mail — the last 24 hours by default, any window on request. Gmail skips the Promotions and Social tabs.
 - Triages every configured backend in turn (Exchange, Gmail, or both), or only the one you name.
-- Classifies each message into the groups in your `triage-rules.md` (defaults: **P1 - Urgent**, **P2 - Actionable**, **P3 - Monitor**, **P4 - Low Signal**, **Uncategorized**).
+- Classifies each message into the groups in your `triage-rules.md` (defaults: **People** — urgent or actionable mail from a real person — then **P1 - Urgent**, **P2 - Actionable**, **P3 - Monitor**, **P4 - Low Signal**, **Uncategorized**).
 - Consolidates repeated alerts into single summarized items, flagged `[Priority]` / `[Follow-up needed]`.
 - Files every message into its group's Exchange folder or Gmail label, out of the inbox.
 - Saves the report as a draft in your own mailbox. If a backend has no new mail, it files nothing and saves no draft.
@@ -52,7 +52,7 @@ It runs unattended and never asks questions. It only reads mail, files it, and s
 
 **Exchange:** requires [`uv`](https://docs.astral.sh/uv/) on PATH. The helper scripts are self-contained `uv` scripts (PEP 723 inline metadata) — `uv run scripts/<name>.py` installs `exchangelib`/`tzlocal` into an ephemeral environment automatically on first run. No separate `pip install` step. If `uv` isn't installed, the skill stops before running anything and says so.
 
-**Gmail:** No Python dependencies, no `uv` requirement. Uses the Gmail tools (`mcp__claude_ai_Gmail__*`) from the **Gmail connector on your Claude account** (claude.ai → Settings → Connectors), not from anything in this repo. Enable that connector once on your account; it isn't project-specific and can't be configured via a project `.mcp.json`. The connector can't download attachment contents, so Gmail items whose details are only in an attachment are marked unverified.
+**Gmail:** No Python dependencies, no `uv` requirement. Uses the Gmail tools (`mcp__claude_ai_Gmail__*`) from the **Gmail connector on your Claude account** (claude.ai → Settings → Connectors), not from anything in this repo. Enable that connector once on your account; it isn't project-specific and can't be configured via a project `.mcp.json`. The connector can't download attachment contents, so Gmail items whose details are only in an attachment are marked unverified. Claude Code must be signed in with your claude.ai account (not an API key) for the connector to be available. **Gmail doesn't work in Codex** — Codex has no claude.ai connectors — so Codex runs triage Exchange only.
 
 ## Setup
 
@@ -82,7 +82,7 @@ User-invoked only — Claude won't start it on its own, since it moves your mail
 /mailbox-triage Exchange only, unread only
 ```
 
-In Codex, use `$mailbox-triage` the same way.
+In Codex, use `$mailbox-triage` the same way (Exchange only — see Prerequisites). The Exchange scripts need network access to your Exchange server, so Codex's sandbox must allow it.
 
 ## Scheduled runs
 

@@ -2,7 +2,7 @@
 
 Gmail is read and written through the Gmail connector on the user's Claude account (claude.ai → Settings → Connectors). Its tools are named `mcp__claude_ai_Gmail__*` and are already signed in through the account — there is no separate sign-in step. If the tools aren't available, stop and report that the connector isn't attached. Never use a browser or the Gmail API directly.
 
-Only use the tools below. The connector also offers sending, forwarding, replying, trashing, and spam tools — never call them.
+Only use the tools below — `search_threads`, `get_thread`, `list_labels`, `create_label`, `label_message`, `unlabel_message`, `create_draft`. These exist on both the claude.ai connector and Google's official Gmail MCP server (`gmailmcp.googleapis.com`), so the steps work with either. The claude.ai connector also offers sending, forwarding, replying, trashing, and spam tools — never call them.
 
 ## Fetch
 
@@ -25,7 +25,7 @@ The connector can list attachment names but can't download their contents. When 
 
 1. Call `list_labels` once to map label names to IDs.
 2. For each group label that doesn't exist yet, call `create_label` with `displayName` set to the label name. Nested names like `Triage/P1` work; parents are created automatically.
-3. For each message, call `update_message_labels` with `messageId`, `addLabelIds: [<group label id>]`, and `removeLabelIds: ["INBOX"]` — this labels it and archives it out of the inbox in one call.
+3. For each message, call `label_message` with `messageId` and `labelIds: [<group label id>]`, then `unlabel_message` with `messageId` and `labelIds: ["INBOX"]` to archive it out of the inbox. Label first, so a failure never leaves a message archived without its group label.
 
 If a message is no longer found, report its sender and subject, skip it, and keep filing the rest.
 
