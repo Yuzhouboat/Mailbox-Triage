@@ -6,8 +6,8 @@
     "name": "Yuzhou",
     "url": "https://github.com/Yuzhouboat"
   },
-  "homepage": "https://github.com/Yuzhouboat/Mailbox-Triage",
-  "repository": "https://github.com/Yuzhouboat/Mailbox-Triage",
+  "homepage": "https://github.com/Yuzhouboat/mailbox-triage",
+  "repository": "https://github.com/Yuzhouboat/mailbox-triage",
   "keywords": ["email", "inbox", "triage", "exchange", "gmail"],
   "skills": "./skills/",
   "interface": {
