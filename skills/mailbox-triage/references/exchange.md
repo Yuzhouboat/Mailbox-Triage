@@ -39,7 +39,9 @@ Write an assignments file with one entry per fetched message, using a durable re
 uv run scripts/move_triaged_messages.py --messages-json <scratch>/triage.json --assignments-json <scratch>/assignments.json --execute
 ```
 
-Without `--execute` it only previews. `--read-only` limits moves to messages already read. Target folders must already exist — the script never creates them, and reports missing or ambiguous folders instead of guessing. Report those; don't create folders or retry with a guessed path.
+Without `--execute` it only previews. `--read-only` limits moves to messages already read.
+
+Each group's folder is found by name (or path, e.g. `Triage/People`) anywhere in the mailbox. A missing folder is created at the top of the mailbox, next to Inbox, with any missing parents. A name that matches several folders is not guessed: that group's messages stay in the inbox and the others still move. The output's `result` has `created_folders`, `folder_errors`, and a status per move — report created folders and any failures. Don't create folders yourself or retry with a guessed path.
 
 ## Draft
 
@@ -53,4 +55,4 @@ It saves the report to the user's own Drafts folder (addressed to themselves) an
 
 - **Auth:** say whether it looks like bad credentials, an unreachable server, or mailbox access denied. Don't fall back to a browser.
 - **Fetch:** say whether the blocker is the query, missing item data, or attachment extraction.
-- **Move:** say whether it's a missing folder, ambiguous folder name, missing message ref, or an Exchange move error.
+- **Move:** say whether it's an ambiguous folder name, a folder that couldn't be created, a missing message ref, or an Exchange move error.

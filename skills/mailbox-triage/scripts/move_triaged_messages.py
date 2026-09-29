@@ -196,10 +196,19 @@ def path_matches(folder: Any, expected_parts: List[str]) -> bool:
     return len(actual_parts) >= len(expected_parts) and actual_parts[-len(expected_parts) :] == expected_parts
 
 
-def resolve_folder(account: Any, folder_name_or_path: str) -> Any:
-    expected_parts = [part for part in folder_name_or_path.split("/") if part]
-    if not expected_parts:
+class FolderNotFoundError(ValueError):
+    pass
+
+
+def split_folder_path(folder_name_or_path: str) -> List[str]:
+    parts = [part for part in folder_name_or_path.split("/") if part]
+    if not parts:
         raise ValueError("Folder path cannot be empty.")
+    return parts
+
+
+def resolve_folder(account: Any, folder_name_or_path: str) -> Any:
+    expected_parts = split_folder_path(folder_name_or_path)
 
     matches = []
     for folder in account.root.walk():
@@ -207,7 +216,7 @@ def resolve_folder(account: Any, folder_name_or_path: str) -> Any:
             matches.append(folder)
 
     if not matches:
-        raise ValueError(f"Destination folder not found: {folder_name_or_path}")
+        raise FolderNotFoundError(f"Destination folder not found: {folder_name_or_path}")
     if len(matches) > 1:
         paths = [" / ".join(folder_path(folder)) for folder in matches[:5]]
         raise ValueError(
@@ -293,15 +302,50 @@ def build_move_plan(
     return moves, skipped
 
 
-def execute_moves(config: Dict[str, Any], moves: List[Dict[str, Any]], folder_map: Dict[str, str]) -> List[Dict[str, Any]]:
+def create_folder_path(account: Any, folder_name_or_path: str) -> Any:
+    """Create a folder (and any missing parents) at the top of the mailbox, next to Inbox."""
+    from exchangelib import Folder
+
+    parent = account.msg_folder_root
+    for name in split_folder_path(folder_name_or_path):
+        existing = [child for child in parent.children if child.name == name]
+        if existing:
+            parent = existing[0]
+        else:
+            folder = Folder(parent=parent, name=name)
+            folder.save()
+            parent = folder
+    return parent
+
+
+def execute_moves(config: Dict[str, Any], moves: List[Dict[str, Any]], folder_map: Dict[str, str]) -> Dict[str, Any]:
     account = build_account(config)
-    folder_cache = {
-        group: resolve_folder(account, destination)
-        for group, destination in folder_map.items()
-    }
+    # Resolve each group's folder on its own, so one bad folder only holds back
+    # that group's messages. Missing folders are created; ambiguous ones are not.
+    folder_cache: Dict[str, Any] = {}
+    folder_errors: Dict[str, str] = {}
+    created_folders: List[str] = []
+    for group, destination in folder_map.items():
+        try:
+            folder_cache[group] = resolve_folder(account, destination)
+        except FolderNotFoundError:
+            try:
+                folder_cache[group] = create_folder_path(account, destination)
+                created_folders.append(destination)
+            except Exception as exc:
+                folder_errors[group] = f"Could not create folder {destination}: {exc}"
+        except Exception as exc:
+            folder_errors[group] = str(exc)
+
     results = []
     for move in moves:
         result = dict(move)
+        if move["group"] in folder_errors:
+            result["status"] = "failed"
+            result["error"] = folder_errors[move["group"]]
+            result["error_type"] = "FolderError"
+            results.append(result)
+            continue
         try:
             message = account.inbox.get(id=move["ews_item_id"])
             message.move(to_folder=folder_cache[move["group"]])
@@ -311,7 +355,7 @@ def execute_moves(config: Dict[str, Any], moves: List[Dict[str, Any]], folder_ma
             result["error"] = str(exc)
             result["error_type"] = exc.__class__.__name__
         results.append(result)
-    return results
+    return {"created_folders": created_folders, "folder_errors": folder_errors, "moves": results}
 
 
 def main() -> int:
@@ -326,7 +370,7 @@ def main() -> int:
     messages = require_messages(messages_payload)
     assignments = load_assignments(assignments_payload)
     groups = list(dict.fromkeys(assignment["group"] for assignment in assignments))
-    folder_map = folder_map_from_config(config, groups)
+    folder_map = folder_map_from_config(raw_config, groups)
 
     moves, skipped = build_move_plan(messages, assignments, folder_map, args.read_only)
     result = execute_moves(config, moves, folder_map) if args.execute else None

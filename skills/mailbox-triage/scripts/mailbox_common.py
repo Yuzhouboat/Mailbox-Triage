@@ -62,6 +62,9 @@ def read_simple_toml(path: Path) -> Dict[str, Any]:
 
         key, raw_value = line.split("=", 1)
         key = key.strip()
+        # Quoted keys ("Distribution alerts" = ...) are needed for names with spaces.
+        if len(key) >= 2 and key[0] == key[-1] and key[0] in "\"'":
+            key = key[1:-1]
         value = parse_scalar(raw_value)
         if current_section is None:
             data[key] = value

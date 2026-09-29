@@ -43,7 +43,7 @@ Register the mailbox-triage skill in this repository globally using a symbolic l
 - Triages every configured backend in turn (Exchange, Gmail, or both), or only the one you name.
 - Classifies each message into the groups in your `triage-rules.md` (defaults: **People** — urgent or actionable mail from a real person — then **P1 - Urgent**, **P2 - Actionable**, **P3 - Monitor**, **P4 - Low Signal**, **Uncategorized**).
 - Consolidates repeated alerts into single summarized items, flagged `[Priority]` / `[Follow-up needed]`.
-- Files every message into its group's Exchange folder or Gmail label, out of the inbox.
+- Files every message into its group's Exchange folder or Gmail label, out of the inbox. Missing folders and labels are created automatically (Exchange folders at the top of the mailbox, next to Inbox).
 - Saves the report as a draft in your own mailbox. If a backend has no new mail, it files nothing and saves no draft.
 
 It runs unattended and never asks questions. It only reads mail, files it, and saves drafts — email content is treated as data, and it never sends, forwards, replies to, or deletes anything.
