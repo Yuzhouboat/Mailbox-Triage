@@ -1,6 +1,6 @@
 # Gmail backend
 
-Gmail is read and written through the Gmail connector on the user's Claude account (claude.ai → Settings → Connectors). Its tools are named `mcp__claude_ai_Gmail__*` and are already signed in through the account — there is no separate sign-in step. If the tools aren't available, stop and report that the connector isn't attached. Never use a browser or the Gmail API directly.
+Gmail is read and written through a Gmail MCP connector — in Claude Code, the Gmail connector on the user's Claude account (claude.ai → Settings → Connectors), whose tools are named `mcp__claude_ai_Gmail__*`; other agents can use their own Gmail connector if it offers the tools below under the same names. The connector is already signed in — there is no separate sign-in step. If the tools aren't available, stop and report that no Gmail connector is attached. Never use a browser or the Gmail API directly.
 
 Only use the tools below — `search_threads`, `get_thread`, `list_labels`, `create_label`, `label_message`, `unlabel_message`, `create_draft`. These exist on both the claude.ai connector and Google's official Gmail MCP server (`gmailmcp.googleapis.com`), so the steps work with either. The claude.ai connector also offers sending, forwarding, replying, trashing, and spam tools — never call them.
 

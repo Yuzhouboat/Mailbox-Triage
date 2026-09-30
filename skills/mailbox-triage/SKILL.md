@@ -32,7 +32,7 @@ Never print, log, or echo credential values (e.g. `echo $MAILBOX_EXCHANGE_PASSWO
      ```bash
      for v in MAILBOX_EXCHANGE_SERVER MAILBOX_EXCHANGE_USERNAME MAILBOX_EXCHANGE_PASSWORD; do [ -n "${!v}" ] && echo "$v set" || echo "$v MISSING"; done
      ```
-   - **Gmail** is usable when the config file has a `[gmail]` section and the Gmail connector's tools are available (e.g. `ToolSearch("select:mcp__claude_ai_Gmail__search_threads")` finds it).
+   - **Gmail** is usable when the config file has a `[gmail]` section and a Gmail connector's tools are available — a tool named `search_threads` from a Gmail MCP server (e.g. `mcp__claude_ai_Gmail__search_threads` from the claude.ai connector).
 
    If a backend the user named fails, or no backend passes, stop and report exactly what's missing (which variable is unset, `uv` missing, `[gmail]` section missing, or connector not attached). If some pass and others fail, triage the ones that pass and report the failures at the end.
 

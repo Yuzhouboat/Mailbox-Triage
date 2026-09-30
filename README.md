@@ -52,7 +52,7 @@ It runs unattended and never asks questions. It only reads mail, files it, and s
 
 **Exchange:** requires [`uv`](https://docs.astral.sh/uv/) on PATH. The helper scripts are self-contained `uv` scripts (PEP 723 inline metadata) — `uv run scripts/<name>.py` installs `exchangelib`/`tzlocal` into an ephemeral environment automatically on first run. No separate `pip install` step. If `uv` isn't installed, the skill stops before running anything and says so.
 
-**Gmail:** No Python dependencies, no `uv` requirement. Uses the Gmail tools (`mcp__claude_ai_Gmail__*`) from the **Gmail connector on your Claude account** (claude.ai → Settings → Connectors), not from anything in this repo. Enable that connector once on your account; it isn't project-specific and can't be configured via a project `.mcp.json`. The connector can't download attachment contents, so Gmail items whose details are only in an attachment are marked unverified. Claude Code must be signed in with your claude.ai account (not an API key) for the connector to be available. **Gmail doesn't work in Codex** — Codex has no claude.ai connectors — so Codex runs triage Exchange only.
+**Gmail:** No Python dependencies, no `uv` requirement. Uses the Gmail tools (`mcp__claude_ai_Gmail__*`) from the **Gmail connector on your Claude account** (claude.ai → Settings → Connectors), not from anything in this repo. Enable that connector once on your account; it isn't project-specific and can't be configured via a project `.mcp.json`. The connector can't download attachment contents, so Gmail items whose details are only in an attachment are marked unverified. In Claude Code, it must be signed in with your claude.ai account (not an API key) for the connector to be available. Codex doesn't have claude.ai connectors; it can use its own Gmail plugin instead, provided that plugin offers equivalent search, read, label, and draft tools — this hasn't been tested.
 
 ## Setup
 
@@ -82,7 +82,7 @@ User-invoked only — Claude won't start it on its own, since it moves your mail
 /mailbox-triage Exchange only, unread only
 ```
 
-In Codex, use `$mailbox-triage` the same way (Exchange only — see Prerequisites). The Exchange scripts need network access to your Exchange server, so Codex's sandbox must allow it.
+In Codex, use `$mailbox-triage` the same way (Gmail there depends on Codex's own Gmail plugin — see Prerequisites). The Exchange scripts need network access to your Exchange server, so Codex's sandbox must allow it.
 
 ## Scheduled runs
 
